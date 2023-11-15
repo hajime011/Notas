@@ -25,7 +25,7 @@ import java.util.Locale
 class CrearNotas : AppCompatActivity() {
     private lateinit var notaEditText: EditText
     private lateinit var crearNotaButton: Button
-    private lateinit var noteDao: NoteDao // Asegúrate de obtener el DAO
+    private lateinit var noteDao: NoteDao
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -33,7 +33,7 @@ class CrearNotas : AppCompatActivity() {
 
         notaEditText = findViewById(R.id.notaEditText)
         crearNotaButton = findViewById(R.id.crearNotaButton)
-        noteDao = (application as MyNotesApplication).appDatabase.noteDao() // Obtiene el DAO
+        noteDao = (application as MyNotesApplication).appDatabase.noteDao()
 
         val ubicacionString = intent.getStringExtra("ubicacion")
 
