@@ -1,5 +1,6 @@
 package com.example.mynotes.database
 import androidx.room.TypeConverter
+import com.google.firebase.Timestamp
 import com.google.firebase.firestore.GeoPoint
 import com.google.gson.Gson
 

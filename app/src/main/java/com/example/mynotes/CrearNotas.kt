@@ -1,6 +1,8 @@
 package com.example.mynotes
 
+import android.content.Context
 import android.content.Intent
+import android.net.ConnectivityManager
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.util.Log
@@ -29,8 +31,6 @@ class CrearNotas : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_crear_notas)
 
-        val db = Firebase.firestore
-
         notaEditText = findViewById(R.id.notaEditText)
         crearNotaButton = findViewById(R.id.crearNotaButton)
         noteDao = (application as MyNotesApplication).appDatabase.noteDao() // Obtiene el DAO
@@ -50,7 +50,6 @@ class CrearNotas : AppCompatActivity() {
             GeoPoint(0.0, 0.0)
         }
 
-
         crearNotaButton.setOnClickListener {
             val nota = notaEditText.text.toString()
             val aplicacion = "Mobil"
@@ -68,35 +67,44 @@ class CrearNotas : AppCompatActivity() {
                 "propietario" to propietario
             )
 
-            // Agregar un nuevo documento con un ID generado automáticamente en Firestore
-            db.collection("MyNotes")
-                .add(notas)
-                .addOnSuccessListener { documentReference ->
-                    val firestoreId = documentReference.id // id de firestore
-                    Log.d("TAG", "Documento agregado con ID: $firestoreId")
-
-                    GlobalScope.launch {
-                        // Insertar la nota en la base de datos local con el ID de Firestore
-                        val noteEntity = NoteEntity(
-                            id = firestoreId,
-                            nota = nota,
-                            aplicacion = aplicacion,
-                            propietario = propietario,
-                            fecha_registro = fecha,
-                            ubicacion = ubicacion
-                        )
-                        noteDao.insert(noteEntity)
+            if (isNetworkAvailable()) {
+                Firebase.firestore.collection("MyNotes")
+                    .add(notas)
+                    .addOnSuccessListener { documentReference ->
+                        val firestoreId = documentReference.id // id de firestore
+                        Log.d("TAG", "Documento agregado con ID: $firestoreId")
+                        Toast.makeText(this, "La nota se ha creado correctamente", Toast.LENGTH_SHORT).show()
                     }
-                    Toast.makeText(this, "La nota se ha creado correctamente", Toast.LENGTH_SHORT).show()
+                    .addOnFailureListener { e ->
+                        Log.w("TAG", "Error al agregar el documento", e)
+                        Toast.makeText(this, "Error al agregar la nota en Firebase", Toast.LENGTH_SHORT).show()
+                    }
+            } else {
+                GlobalScope.launch {
+                    val noteEntity = NoteEntity(
+                        nota = nota,
+                        aplicacion = aplicacion,
+                        propietario = propietario,
+                        fecha_registro = fecha,
+                        fechaActual = fechaActual,
+                        ubicacion = ubicacion,
+                        estado = "NoEnviado"
+                    )
+                    noteDao.insert(noteEntity)
+                    Toast.makeText(this@CrearNotas, "La nota se ha creado localmente", Toast.LENGTH_SHORT).show()
                 }
-                .addOnFailureListener { e ->
-                    Log.w("TAG", "Error al agregar el documento", e)
-                }
-
+            }
 
             val intent = Intent(this, MainActivity::class.java)
             startActivity(intent)
         }
+
     }
+    private fun isNetworkAvailable(): Boolean {
+        val connectivityManager = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+        val networkInfo = connectivityManager.activeNetworkInfo
+        return networkInfo != null && networkInfo.isConnected
+    }
+
 }
 

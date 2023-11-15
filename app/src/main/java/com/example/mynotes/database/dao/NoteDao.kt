@@ -26,10 +26,10 @@ interface NoteDao {
     @Insert
     suspend fun insertAll(notes: List<NoteEntity>)
 
-
-
     @Update
     suspend fun update(noteEntity: NoteEntity)
+
+
 
 }
 

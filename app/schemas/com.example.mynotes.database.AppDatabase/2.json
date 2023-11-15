@@ -2,16 +2,16 @@
   "formatVersion": 1,
   "database": {
     "version": 2,
-    "identityHash": "fcfd8f9076ced12c24bf49f2eb810067",
+    "identityHash": "48a358191b7f3dc7f3bc06f46071624c",
     "entities": [
       {
         "tableName": "mynotes",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `nota` TEXT NOT NULL, `aplicacion` TEXT NOT NULL, `propietario` TEXT NOT NULL, `fecha_registro` TEXT NOT NULL, `ubicacion` TEXT NOT NULL, PRIMARY KEY(`id`))",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `nota` TEXT NOT NULL, `aplicacion` TEXT NOT NULL, `propietario` TEXT NOT NULL, `fecha_registro` TEXT NOT NULL, `fechaActual` INTEGER NOT NULL, `ubicacion` TEXT NOT NULL, `estado` TEXT NOT NULL)",
         "fields": [
           {
             "fieldPath": "id",
             "columnName": "id",
-            "affinity": "TEXT",
+            "affinity": "INTEGER",
             "notNull": true
           },
           {
@@ -39,14 +39,26 @@
             "notNull": true
           },
           {
+            "fieldPath": "fechaActual",
+            "columnName": "fechaActual",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
             "fieldPath": "ubicacion",
             "columnName": "ubicacion",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "estado",
+            "columnName": "estado",
             "affinity": "TEXT",
             "notNull": true
           }
         ],
         "primaryKey": {
-          "autoGenerate": false,
+          "autoGenerate": true,
           "columnNames": [
             "id"
           ]
@@ -58,7 +70,7 @@
     "views": [],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'fcfd8f9076ced12c24bf49f2eb810067')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '48a358191b7f3dc7f3bc06f46071624c')"
     ]
   }
 }
