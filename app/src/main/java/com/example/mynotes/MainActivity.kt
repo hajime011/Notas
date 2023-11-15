@@ -25,6 +25,7 @@ import com.google.firebase.firestore.GeoPoint
 import com.example.mynotes.database.AppDatabase
 import com.example.mynotes.database.entity.NoteEntity
 import com.google.firebase.Timestamp
+import com.google.firebase.firestore.DocumentSnapshot
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
@@ -136,14 +137,14 @@ class MainActivity : AppCompatActivity() {
                         for (document in it.result) {
 
                             val data = NoteEntity(document.id,
-                                document.getString("nota").toString(),
-                                "2","3",document.getString("fecha_registro").toString(),"5","6","7")
+                                document.getString("nota").toString(),document.getString("aplicacion").toString(),document.getString("propietario").toString(),document.getString("fecha_registro").toString(),document.getString("fechaActual").toString(),document.getString("ubicacion").toString(),document.getString("estado").toString())
                             lista.add(data)
                             // ALMACENAS EN ROOM LAS  NOTAS CONSULTADAS
-//                            GlobalScope.launch(Dispatchers.IO) {
-//                                (appDatabase as AppDatabase).notesDao()!!
-//                                    .insertAll(document.toNotes())
-//                            }
+                            GlobalScope.launch(Dispatchers.IO) {
+                                (appDatabase as AppDatabase).noteDao()
+                                    .insertAll(listOf(data))
+                            }
+
                         }
                         val adapter = NotesAdapter(lista, this)
                         notesListView.layoutManager = LinearLayoutManager(this)
@@ -154,6 +155,7 @@ class MainActivity : AppCompatActivity() {
                 }
         } else {
 //            OFFLINE
+            loadRoomNotes()
         }
     }
     public fun obtenerYMostrarUbicacionActual() {
