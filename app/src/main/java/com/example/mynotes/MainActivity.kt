@@ -137,7 +137,13 @@ class MainActivity : AppCompatActivity() {
                         for (document in it.result) {
 
                             val data = NoteEntity(document.id,
-                                document.getString("nota").toString(),document.getString("aplicacion").toString(),document.getString("propietario").toString(),document.getString("fecha_registro").toString(),document.getString("fechaActual").toString(),document.getString("ubicacion").toString(),document.getString("estado").toString())
+                                document.getString("nota").toString(),
+                                document.getString("aplicacion").toString(),
+                                document.getString("propietario").toString(),
+                                document.getString("fecha_registro").toString(),
+                                document.getString("fechaActual").toString(),
+                                document.getString("ubicacion").toString(),
+                                document.getString("estado").toString())
                             lista.add(data)
                             // ALMACENAS EN ROOM LAS  NOTAS CONSULTADAS
                             GlobalScope.launch(Dispatchers.IO) {
