@@ -8,16 +8,15 @@ import com.google.firebase.firestore.GeoPoint
 
 @Entity(tableName = "mynotes")
 data class NoteEntity(
-    @PrimaryKey(autoGenerate = true)
-    @ColumnInfo(name = "id")
-    val id: Long = 0,
-    val nota: String,
-    val aplicacion: String,
-    val propietario: String,
-    val fecha_registro: String,
-    val fechaActual: Timestamp,
-    val ubicacion: GeoPoint,
-    val estado:String
+    @PrimaryKey
+    val id : String,
+    val nota : String,
+    val aplicacion : String,
+    val propietario : String,
+    val fecha_registro : String,
+    val fechaActual : String,
+    val ubicacion : String,
+    val estado : String
 
 )
 

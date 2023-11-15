@@ -1,8 +1,11 @@
 package com.example.mynotes
 import NotesAdapter
 import android.Manifest
+import android.annotation.SuppressLint
+import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.ConnectivityManager
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.util.Log
@@ -21,9 +24,13 @@ import com.google.android.gms.location.LocationServices
 import com.google.firebase.firestore.GeoPoint
 import com.example.mynotes.database.AppDatabase
 import com.example.mynotes.database.entity.NoteEntity
+import com.google.firebase.Timestamp
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
+import java.text.ParseException
+import java.text.SimpleDateFormat
+import java.util.Locale
 
 
 class MainActivity : AppCompatActivity() {
@@ -52,21 +59,14 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
-
-
-
         setupView()
-        Permisos()
+        permisos()
         manageButton()
         sessionFirebase()
-        getList()
-        loadRoomNotes()
+        getNotes()
+        //loadRoomNotes()
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
         obtenerYMostrarUbicacionActual()
-
-
-
-
     }
 
     private fun setupView() {
@@ -96,7 +96,7 @@ class MainActivity : AppCompatActivity() {
             }
     }
 
-    private fun Permisos() {
+    private fun permisos() {
         // Verificar si tienes permiso para acceder a la ubicación
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
 
@@ -107,23 +107,55 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun getList(){
+        if(isNetworkAvailable()){
+            //verificar la conexión a internet
+            // obtener las notas firebase
+            db.collection(CONSTANTES.COLLECTION_NOTES).get().addOnCompleteListener {
+                if(it.isSuccessful){
+                    val lista : List<NoteEntity> = emptyList()
+                    for(document in it.result){
 
-        db.collection("MyNotes")
-            .get()
-            .addOnSuccessListener { result ->
-                for (document in result) {
-                    // muestra en consola
-                    notesMap[document.id] = document.data
-                    Log.d("TAG", "${document.id} => ${document.data}")
+                    }
                 }
-                //funcion de enlistar
-                listNotes()
+            }.addOnFailureListener {
+                Log.i("ERROR ",it.message.toString())
             }
-            .addOnFailureListener { exception ->
-                Log.w("TAG", "Error getting documents.", exception)
-            }
+        }else{
+            // si no hay conexión offline
+            // obtener las notas room
+        }
     }
+    fun getNotes() {
+        if (isNetworkAvailable()) {
+            db.collection(CONSTANTES.COLLECTION_NOTES)
+                .get()
+                .addOnCompleteListener {
+                    if (it.isSuccessful) {
+                        val lista : ArrayList<NoteEntity> = ArrayList()
+                        appDatabase = (this.application as MyNotesApplication).appDatabase
+                        for (document in it.result) {
 
+                            val data = NoteEntity(document.id,
+                                document.getString("nota").toString(),
+                                "2","3",document.getString("fecha_registro").toString(),"5","6","7")
+                            lista.add(data)
+                            // ALMACENAS EN ROOM LAS  NOTAS CONSULTADAS
+//                            GlobalScope.launch(Dispatchers.IO) {
+//                                (appDatabase as AppDatabase).notesDao()!!
+//                                    .insertAll(document.toNotes())
+//                            }
+                        }
+                        val adapter = NotesAdapter(lista, this)
+                        notesListView.layoutManager = LinearLayoutManager(this)
+                        notesListView.adapter = adapter
+                    }
+                }.addOnFailureListener {
+                    Log.i("ERROR", it.message.toString())
+                }
+        } else {
+//            OFFLINE
+        }
+    }
     public fun obtenerYMostrarUbicacionActual() {
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
             fusedLocationClient.lastLocation
@@ -162,10 +194,11 @@ class MainActivity : AppCompatActivity() {
         loadRoomNotes()
     }
 
-
-
-
-
+    private fun isNetworkAvailable(): Boolean {
+        val connectivityManager = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+        val networkInfo = connectivityManager.activeNetworkInfo
+        return networkInfo != null && networkInfo.isConnected
+    }
 
     private fun listNotes() {
         // Asegúrate de asignar un valor a selectedNoteId antes de este punto
@@ -174,6 +207,32 @@ class MainActivity : AppCompatActivity() {
             val intent = Intent(this, EditNoteActivity::class.java)
             intent.putExtra("noteId", selectedNoteId)
             startActivity(intent)
+        }
+    }
+
+    public fun geoPointConverter(position : String) : GeoPoint{
+        val regex = Regex("[-+]?[0-9]*\\.?[0-9]+")
+        val matches = regex.findAll(position)
+        val coordinates = matches.map { it.value.toDouble() }.toList()
+        return if (coordinates.size == 2) {
+            GeoPoint(coordinates[0], coordinates[1])
+        } else {
+            GeoPoint(0.0, 0.0)
+        }
+    }
+
+    @SuppressLint("SimpleDateFormat")
+    fun converterStringAtTimestamp(fecha : String) : Timestamp {
+        val dateFormat = SimpleDateFormat("EEE MMM dd HH:mm:ss 'GMT'Z yyyy", Locale.US)
+        try {
+            val fechaHoraDate = dateFormat.parse(fecha)
+            return if (fechaHoraDate != null) {
+                Timestamp(fechaHoraDate)
+            } else {
+                Timestamp.now()
+            }
+        } catch (e: ParseException) {
+            return Timestamp.now()
         }
     }
 

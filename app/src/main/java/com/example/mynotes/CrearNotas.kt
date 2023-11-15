@@ -37,7 +37,7 @@ class CrearNotas : AppCompatActivity() {
 
         val ubicacionString = intent.getStringExtra("ubicacion")
 
-        val ubicacion = if (ubicacionString != null) {
+        val ubicacion = if (ubicacionString != null && ubicacionString != "null,null") {
             val ubicacionArray = ubicacionString.split(",")
             if (ubicacionArray.size == 2) {
                 val latitud = ubicacionArray[0].toDouble()
@@ -82,12 +82,13 @@ class CrearNotas : AppCompatActivity() {
             } else {
                 GlobalScope.launch {
                     val noteEntity = NoteEntity(
+                        id = "",
                         nota = nota,
                         aplicacion = aplicacion,
                         propietario = propietario,
                         fecha_registro = fecha,
-                        fechaActual = fechaActual,
-                        ubicacion = ubicacion,
+                        fechaActual = fechaActual.toDate().toString(),
+                        ubicacion = ubicacion.toString(),
                         estado = "NoEnviado"
                     )
                     noteDao.insert(noteEntity)
