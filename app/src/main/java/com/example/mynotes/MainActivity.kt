@@ -142,7 +142,7 @@ class MainActivity : AppCompatActivity() {
                                 document.getTimestamp("fecha")!!.toDate().toString(),
                                 document.getString("fecha_registro").toString(),
                                 document.getString("nota").toString(),
-                                document.getGeoPoint("posicion")?:GeoPoint(0.0,0.0),
+                                document.getGeoPoint("posicion").toString()?:GeoPoint(0.0,0.0).toString(),
                                 document.getString("propietario").toString()
                             )
                             lista.add(data)

@@ -14,7 +14,7 @@ data class NoteEntity(
     val fecha: String,
     val fecha_registro: String,
     val nota: String,
-    val posicion: GeoPoint,
+    val posicion: String,
     val propietario: String,
     //val estado : String
 
