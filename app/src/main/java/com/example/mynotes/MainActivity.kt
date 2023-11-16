@@ -45,7 +45,7 @@ class MainActivity : AppCompatActivity() {
     private val password = "Coordi2023"
     private lateinit var addNoteButton: Button
 
-    private lateinit var notesListView: RecyclerView
+    private  lateinit var  notesListView: RecyclerView
 
     private lateinit var fusedLocationClient: FusedLocationProviderClient
 
@@ -55,6 +55,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var appDatabase: AppDatabase
 
     private var selectedNoteId: String? = null
+
 
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -134,7 +135,6 @@ class MainActivity : AppCompatActivity() {
             // obtener las notas room
         }
     }
-
     fun getNotes() {
         if (isNetworkAvailable()) {
             db.collection(CONSTANTES.COLLECTION_NOTES)
@@ -160,6 +160,7 @@ class MainActivity : AppCompatActivity() {
                                 appDatabase.noteDao()
                                     .insert(data)
                             }
+
                         }
                         val adapter = NotesAdapter(lista, this)
                         notesListView.layoutManager = LinearLayoutManager(this)
@@ -195,7 +196,6 @@ class MainActivity : AppCompatActivity() {
             Log.w("TAG", "No tienes permiso para acceder a la ubicación.")
         }
     }
-
     private fun loadRoomNotes() {
         GlobalScope.launch(Dispatchers.IO) {
             val roomNotes: List<NoteEntity> = appDatabase.noteDao().getAllNotes()
