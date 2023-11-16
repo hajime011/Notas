@@ -139,7 +139,7 @@ class MainActivity : AppCompatActivity() {
                             val data = NoteEntity(
                                 document.id,
                                 document.getString("aplicacion").toString(),
-                                document.getTimestamp("fecha")?:Timestamp.now(),
+                                document.getTimestamp("fecha")!!.toDate().toString(),
                                 document.getString("fecha_registro").toString(),
                                 document.getString("nota").toString(),
                                 document.getGeoPoint("posicion")?:GeoPoint(0.0,0.0),
@@ -148,11 +148,9 @@ class MainActivity : AppCompatActivity() {
                             lista.add(data)
                             // ALMACENAS EN ROOM LAS  NOTAS CONSULTADAS
                             GlobalScope.launch(Dispatchers.IO) {
-                                (appDatabase as AppDatabase).noteDao()
-                                    .insertAll(listOf(data))
+                                (appDatabase).noteDao()
+                                    .insert(data)
                             }
-
-
                         }
 
                         val adapter = NotesAdapter(lista, this)

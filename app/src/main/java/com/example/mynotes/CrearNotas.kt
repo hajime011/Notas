@@ -82,17 +82,17 @@ class CrearNotas : AppCompatActivity() {
             } else {
                 GlobalScope.launch {
                     val noteEntity = NoteEntity(
-                        id = "",
+                        id = "1",
                         nota = nota,
                         aplicacion = aplicacion,
                         propietario = propietario,
                         fecha_registro = fecha_registro,
-                        fecha = fecha,
+                        fecha = fecha.toString(),
                         posicion = posicion,
                         //estado = "NoEnviado"
                     )
                     noteDao.insert(noteEntity)
-                    Toast.makeText(this@CrearNotas, "La nota se ha creado localmente", Toast.LENGTH_SHORT).show()
+
                 }
             }
 
