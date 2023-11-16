@@ -64,6 +64,7 @@ class MainActivity : AppCompatActivity() {
         manageButton()
         sessionFirebase()
         getNotes()
+        //getList()
         //loadRoomNotes()
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
         obtenerYMostrarUbicacionActual()
@@ -138,18 +139,18 @@ class MainActivity : AppCompatActivity() {
                             val data = NoteEntity(
                                 document.id,
                                 document.getString("aplicacion").toString(),
-                                document.getString("fecha").toString(),
+                                document.getTimestamp("fecha").toString(),
                                 document.getString("fecha_registro").toString(),
                                 document.getString("nota").toString(),
-                                document.getString("posicion").toString(),
+                                document.getGeoPoint("posicion").toString(),
                                 document.getString("propietario").toString()
                             )
                             lista.add(data)
                             // ALMACENAS EN ROOM LAS  NOTAS CONSULTADAS
-                            //GlobalScope.launch(Dispatchers.IO) {
-                                //(appDatabase as AppDatabase).noteDao()
-                                    //.insertAll(listOf(data))
-                            //}
+                            GlobalScope.launch(Dispatchers.IO) {
+                                (appDatabase as AppDatabase).noteDao()
+                                    .insertAll(listOf(data))
+                            }
 
 
                         }
@@ -163,7 +164,7 @@ class MainActivity : AppCompatActivity() {
                 }
         } else {
 //            OFFLINE
-            loadRoomNotes()
+            //loadRoomNotes()
         }
     }
     public fun obtenerYMostrarUbicacionActual() {
