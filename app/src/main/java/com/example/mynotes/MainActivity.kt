@@ -1,4 +1,5 @@
 package com.example.mynotes
+
 import NotesAdapter
 import android.Manifest
 import android.annotation.SuppressLint
@@ -44,7 +45,7 @@ class MainActivity : AppCompatActivity() {
     private val password = "Coordi2023"
     private lateinit var addNoteButton: Button
 
-    private  lateinit var  notesListView: RecyclerView
+    private lateinit var notesListView: RecyclerView
 
     private lateinit var fusedLocationClient: FusedLocationProviderClient
 
@@ -54,7 +55,6 @@ class MainActivity : AppCompatActivity() {
     private lateinit var appDatabase: AppDatabase
 
     private var selectedNoteId: String? = null
-
 
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -99,52 +99,67 @@ class MainActivity : AppCompatActivity() {
 
     private fun permisos() {
         // Verificar si tienes permiso para acceder a la ubicación
-        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+        if (ActivityCompat.checkSelfPermission(
+                this,
+                Manifest.permission.ACCESS_FINE_LOCATION
+            ) == PackageManager.PERMISSION_GRANTED
+        ) {
 
         } else {
             // Si no tienes permiso, solicita permiso al usuario
-            ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.ACCESS_FINE_LOCATION), 1)
+            ActivityCompat.requestPermissions(
+                this,
+                arrayOf(Manifest.permission.ACCESS_FINE_LOCATION),
+                1
+            )
         }
     }
 
-    private fun getList(){
-        if(isNetworkAvailable()){
+    private fun getList() {
+        if (isNetworkAvailable()) {
             //verificar la conexión a internet
             // obtener las notas firebase
             db.collection(CONSTANTES.COLLECTION_NOTES).get().addOnCompleteListener {
-                if(it.isSuccessful){
-                    val lista : List<NoteEntity> = emptyList()
-                    for(document in it.result){
+                if (it.isSuccessful) {
+                    val lista: List<NoteEntity> = emptyList()
+                    for (document in it.result) {
 
                     }
                 }
             }.addOnFailureListener {
-                Log.i("ERROR ",it.message.toString())
+                Log.i("ERROR ", it.message.toString())
             }
-        }else{
+        } else {
             // si no hay conexión offline
             // obtener las notas room
         }
     }
+
     fun getNotes() {
         if (isNetworkAvailable()) {
             db.collection(CONSTANTES.COLLECTION_NOTES)
                 .get()
                 .addOnCompleteListener {
                     if (it.isSuccessful) {
-                        val lista : ArrayList<NoteEntity> = ArrayList()
+                        val lista: ArrayList<NoteEntity> = ArrayList()
                         appDatabase = (this.application as MyNotesApplication).appDatabase
                         for (document in it.result) {
-
-                            val data = NoteEntity(document.id,
-                                document.getString("nota").toString(),document.getString("aplicacion").toString(),document.getString("propietario").toString(),document.getString("fecha_registro").toString(),document.getString("fechaActual").toString(),document.getString("ubicacion").toString(),document.getString("estado").toString())
+                            val data = NoteEntity(
+                                document.id,
+                                document.getString("nota").toString(),
+                                document.getString("aplicacion").toString(),
+                                document.getString("propietario").toString(),
+                                document.getString("fecha_registro").toString(),
+                                document.getTimestamp("fecha").toString(),
+                                document.getGeoPoint("posicion").toString(),
+                                "SINCRONIZADO"
+                            )
                             lista.add(data)
                             // ALMACENAS EN ROOM LAS  NOTAS CONSULTADAS
                             GlobalScope.launch(Dispatchers.IO) {
-                                (appDatabase as AppDatabase).noteDao()
-                                    .insertAll(listOf(data))
+                                appDatabase.noteDao()
+                                    .insert(data)
                             }
-
                         }
                         val adapter = NotesAdapter(lista, this)
                         notesListView.layoutManager = LinearLayoutManager(this)
@@ -158,8 +173,13 @@ class MainActivity : AppCompatActivity() {
             loadRoomNotes()
         }
     }
+
     public fun obtenerYMostrarUbicacionActual() {
-        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+        if (ActivityCompat.checkSelfPermission(
+                this,
+                Manifest.permission.ACCESS_FINE_LOCATION
+            ) == PackageManager.PERMISSION_GRANTED
+        ) {
             fusedLocationClient.lastLocation
                 .addOnSuccessListener { location ->
                     if (location != null) {
@@ -175,6 +195,7 @@ class MainActivity : AppCompatActivity() {
             Log.w("TAG", "No tienes permiso para acceder a la ubicación.")
         }
     }
+
     private fun loadRoomNotes() {
         GlobalScope.launch(Dispatchers.IO) {
             val roomNotes: List<NoteEntity> = appDatabase.noteDao().getAllNotes()
@@ -197,7 +218,8 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun isNetworkAvailable(): Boolean {
-        val connectivityManager = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+        val connectivityManager =
+            getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
         val networkInfo = connectivityManager.activeNetworkInfo
         return networkInfo != null && networkInfo.isConnected
     }
@@ -212,7 +234,7 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    public fun geoPointConverter(position : String) : GeoPoint{
+    public fun geoPointConverter(position: String): GeoPoint {
         val regex = Regex("[-+]?[0-9]*\\.?[0-9]+")
         val matches = regex.findAll(position)
         val coordinates = matches.map { it.value.toDouble() }.toList()
@@ -224,7 +246,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     @SuppressLint("SimpleDateFormat")
-    fun converterStringAtTimestamp(fecha : String) : Timestamp {
+    fun converterStringAtTimestamp(fecha: String): Timestamp {
         val dateFormat = SimpleDateFormat("EEE MMM dd HH:mm:ss 'GMT'Z yyyy", Locale.US)
         try {
             val fechaHoraDate = dateFormat.parse(fecha)
@@ -239,13 +261,15 @@ class MainActivity : AppCompatActivity() {
     }
 
 
-
-
     private fun manageButton() {
         addNoteButton.setOnClickListener {
             val intent = Intent(this, CrearNotas::class.java)
-            val ubicacionString = ubicacionActual?.latitude.toString() + "," + ubicacionActual?.longitude.toString()
-            intent.putExtra("ubicacion", ubicacionString)  // Pasar la ubicación como cadena//@PrimaryKey(autoGenerate = true)
+            val ubicacionString =
+                ubicacionActual?.latitude.toString() + "," + ubicacionActual?.longitude.toString()
+            intent.putExtra(
+                "ubicacion",
+                ubicacionString
+            )  // Pasar la ubicación como cadena//@PrimaryKey(autoGenerate = true)
             startActivity(intent)
 
             // Después de agregar una nueva nota, actualiza la lista y notifica al adaptador
