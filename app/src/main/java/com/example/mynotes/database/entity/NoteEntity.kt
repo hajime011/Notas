@@ -11,10 +11,10 @@ data class NoteEntity(
     @PrimaryKey
     val id: String,
     val aplicacion: String,
-    val fecha: String,
+    val fecha: Timestamp,
     val fecha_registro: String,
     val nota: String,
-    val posicion: String,
+    val posicion: GeoPoint,
     val propietario: String,
     //val estado : String
 

@@ -87,8 +87,8 @@ class CrearNotas : AppCompatActivity() {
                         aplicacion = aplicacion,
                         propietario = propietario,
                         fecha_registro = fecha_registro,
-                        fecha = fecha.toDate().toString(),
-                        posicion = posicion.toString(),
+                        fecha = fecha,
+                        posicion = posicion,
                         //estado = "NoEnviado"
                     )
                     noteDao.insert(noteEntity)

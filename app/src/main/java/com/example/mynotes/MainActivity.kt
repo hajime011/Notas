@@ -139,10 +139,10 @@ class MainActivity : AppCompatActivity() {
                             val data = NoteEntity(
                                 document.id,
                                 document.getString("aplicacion").toString(),
-                                document.getTimestamp("fecha").toString(),
+                                document.getTimestamp("fecha")?:Timestamp.now(),
                                 document.getString("fecha_registro").toString(),
                                 document.getString("nota").toString(),
-                                document.getGeoPoint("posicion").toString(),
+                                document.getGeoPoint("posicion")?:GeoPoint(0.0,0.0),
                                 document.getString("propietario").toString()
                             )
                             lista.add(data)
