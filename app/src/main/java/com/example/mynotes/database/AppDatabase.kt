@@ -6,7 +6,7 @@ import androidx.room.TypeConverters
 import com.example.mynotes.database.dao.NoteDao
 import com.example.mynotes.database.entity.NoteEntity
 
-@Database(entities = [NoteEntity::class], version = 3)
+@Database(entities = [NoteEntity::class], version = 4)
 //@TypeConverters(Converters::class, TimestampConverter::class)
 @TypeConverters(Converters::class, TimestampConverter::class)
 

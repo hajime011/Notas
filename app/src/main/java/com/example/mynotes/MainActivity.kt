@@ -25,7 +25,6 @@ import com.google.firebase.firestore.GeoPoint
 import com.example.mynotes.database.AppDatabase
 import com.example.mynotes.database.entity.NoteEntity
 import com.google.firebase.Timestamp
-import com.google.firebase.firestore.DocumentSnapshot
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
@@ -136,22 +135,25 @@ class MainActivity : AppCompatActivity() {
                         appDatabase = (this.application as MyNotesApplication).appDatabase
                         for (document in it.result) {
 
-                            val data = NoteEntity(document.id,
-                                document.getString("nota").toString(),
+                            val data = NoteEntity(
+                                document.id,
                                 document.getString("aplicacion").toString(),
-                                document.getString("propietario").toString(),
+                                document.getString("fecha").toString(),
                                 document.getString("fecha_registro").toString(),
-                                document.getString("fechaActual").toString(),
-                                document.getString("ubicacion").toString(),
-                                document.getString("estado").toString())
+                                document.getString("nota").toString(),
+                                document.getString("posicion").toString(),
+                                document.getString("propietario").toString()
+                            )
                             lista.add(data)
                             // ALMACENAS EN ROOM LAS  NOTAS CONSULTADAS
-                            GlobalScope.launch(Dispatchers.IO) {
-                                (appDatabase as AppDatabase).noteDao()
-                                    .insertAll(listOf(data))
-                            }
+                            //GlobalScope.launch(Dispatchers.IO) {
+                                //(appDatabase as AppDatabase).noteDao()
+                                    //.insertAll(listOf(data))
+                            //}
+
 
                         }
+
                         val adapter = NotesAdapter(lista, this)
                         notesListView.layoutManager = LinearLayoutManager(this)
                         notesListView.adapter = adapter

@@ -35,9 +35,9 @@ class CrearNotas : AppCompatActivity() {
         crearNotaButton = findViewById(R.id.crearNotaButton)
         noteDao = (application as MyNotesApplication).appDatabase.noteDao()
 
-        val ubicacionString = intent.getStringExtra("ubicacion")
+        val ubicacionString = intent.getStringExtra("posicion")
 
-        val ubicacion = if (ubicacionString != null && ubicacionString != "null,null") {
+        val posicion = if (ubicacionString != null && ubicacionString != "null,null") {
             val ubicacionArray = ubicacionString.split(",")
             if (ubicacionArray.size == 2) {
                 val latitud = ubicacionArray[0].toDouble()
@@ -54,16 +54,16 @@ class CrearNotas : AppCompatActivity() {
             val nota = notaEditText.text.toString()
             val aplicacion = "Mobil"
             val propietario = "Cristian D"
-            val fechaActual = Timestamp.now()
+            val fecha = Timestamp.now()
             val dateFormat = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
-            val fecha = dateFormat.format(fechaActual.toDate())
+            val fecha_registro = dateFormat.format(fecha.toDate())
 
             val notas = hashMapOf(
                 "aplicacion" to aplicacion,
-                "fecha" to fechaActual,
-                "fecha_registro" to fecha,
+                "fecha" to fecha,
+                "fecha_registro" to fecha_registro,
                 "nota" to nota,
-                "posicion" to ubicacion,
+                "posicion" to posicion,
                 "propietario" to propietario
             )
 
@@ -86,10 +86,10 @@ class CrearNotas : AppCompatActivity() {
                         nota = nota,
                         aplicacion = aplicacion,
                         propietario = propietario,
-                        fecha_registro = fecha,
-                        fechaActual = fechaActual.toDate().toString(),
-                        ubicacion = ubicacion.toString(),
-                        estado = "NoEnviado"
+                        fecha_registro = fecha_registro,
+                        fecha = fecha.toDate().toString(),
+                        posicion = posicion.toString(),
+                        //estado = "NoEnviado"
                     )
                     noteDao.insert(noteEntity)
                     Toast.makeText(this@CrearNotas, "La nota se ha creado localmente", Toast.LENGTH_SHORT).show()
