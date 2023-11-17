@@ -52,8 +52,6 @@ class MainActivity : AppCompatActivity() {
 
     private lateinit var appDatabase: AppDatabase
 
-    private var selectedNoteId: String? = null
-
 
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -64,7 +62,7 @@ class MainActivity : AppCompatActivity() {
         manageButton()
         sessionFirebase()
         getNotes()
-        //getList()
+        sincroFirestore()
         //loadRoomNotes()
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
         obtenerYMostrarUbicacionActual()
@@ -106,28 +104,8 @@ class MainActivity : AppCompatActivity() {
             ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.ACCESS_FINE_LOCATION), 1)
         }
     }
-
-    private fun getList(){
-        if(isNetworkAvailable()){
-            //verificar la conexión a internet
-            // obtener las notas firebase
-            db.collection(CONSTANTES.COLLECTION_NOTES).get().addOnCompleteListener {
-                if(it.isSuccessful){
-                    val lista : List<NoteEntity> = emptyList()
-                    for(document in it.result){
-
-                    }
-                }
-            }.addOnFailureListener {
-                Log.i("ERROR ",it.message.toString())
-            }
-        }else{
-            // si no hay conexión offline
-            // obtener las notas room
-        }
-    }
     fun getNotes() {
-        if (isNetworkAvailable()) {
+        if (UtilidadesRed.estaDisponibleRed((this))) {
             db.collection(CONSTANTES.COLLECTION_NOTES)
                 .get()
                 .addOnCompleteListener {
@@ -142,16 +120,17 @@ class MainActivity : AppCompatActivity() {
                                 document.getTimestamp("fecha")!!.toDate().toString(),
                                 document.getString("fecha_registro").toString(),
                                 document.getString("nota").toString(),
-                                document.getGeoPoint("posicion").toString()?:GeoPoint(0.0,0.0).toString(),
-                                document.getString("propietario").toString()
+                                document.getGeoPoint("posicion").toString(),
+                                document.getString("propietario").toString(),
+                                document.getString("estado").toString()
                             )
                             lista.add(data)
-                            // ALMACENAS EN ROOM LAS  NOTAS CONSULTADAS
                             GlobalScope.launch(Dispatchers.IO) {
                                 (appDatabase).noteDao()
                                     .insert(data)
                             }
                         }
+                        //loadRoomNotes()
 
                         val adapter = NotesAdapter(lista, this)
                         notesListView.layoutManager = LinearLayoutManager(this)
@@ -162,7 +141,7 @@ class MainActivity : AppCompatActivity() {
                 }
         } else {
 //            OFFLINE
-            //loadRoomNotes()
+            loadRoomNotes()
         }
     }
     public fun obtenerYMostrarUbicacionActual() {
@@ -185,15 +164,49 @@ class MainActivity : AppCompatActivity() {
     private fun loadRoomNotes() {
         GlobalScope.launch(Dispatchers.IO) {
             val roomNotes: List<NoteEntity> = appDatabase.noteDao().getAllNotes()
-
             runOnUiThread {
                 listRoomNotes(roomNotes)
             }
         }
     }
+    private fun sincroFirestore() {
+        GlobalScope.launch(Dispatchers.IO) {
+            val localNotes = appDatabase.noteDao().getAllNotes()
+
+            for (localNote in localNotes) {
+                if (localNote.estado == "NoEnviado") {
+                    val noteData = hashMapOf(
+                        "aplicacion" to localNote.aplicacion,
+                        "fecha" to converterStringAtTimestamp(localNote.fecha),
+                        "fecha_registro" to localNote.fecha_registro,
+                        "nota" to localNote.nota,
+                        "posicion" to geoPointConverter(localNote.posicion),
+                        "propietario" to localNote.propietario,
+                    )
+
+                    //firestore
+                    db.collection(CONSTANTES.COLLECTION_NOTES)
+                        .add(noteData)
+                        .addOnSuccessListener { documentReference ->
+                            GlobalScope.launch(Dispatchers.IO) {
+                                // Actualiza el estado de la nota local en Room
+                                localNote.estado = "SiEnviado"
+                                appDatabase.noteDao().update(localNote)
+                                Log.d("MAR", "Note synced to Firebase: $localNote")
+                            }
+                        }
+                        .addOnFailureListener { e ->
+                            Log.e("MAR", "Error syncing note to Firebase: ${e.message}")
+                        }
+                }
+            }
+        }
+    }
+
 
     private fun listRoomNotes(roomNotes: List<NoteEntity>) {
-        val adapter = NotesAdapter(roomNotes, this)
+        val mutableRoomNotes: MutableList<NoteEntity> = roomNotes.toMutableList()
+        val adapter = NotesAdapter(mutableRoomNotes, this)
         notesListView.layoutManager = LinearLayoutManager(this)
         notesListView.adapter = adapter
     }
@@ -203,21 +216,7 @@ class MainActivity : AppCompatActivity() {
         loadRoomNotes()
     }
 
-    private fun isNetworkAvailable(): Boolean {
-        val connectivityManager = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
-        val networkInfo = connectivityManager.activeNetworkInfo
-        return networkInfo != null && networkInfo.isConnected
-    }
 
-    private fun listNotes() {
-        // Asegúrate de asignar un valor a selectedNoteId antes de este punto
-        if (selectedNoteId != null) {
-            Log.d("MainActivity", "Selected Note ID: $selectedNoteId")
-            val intent = Intent(this, EditNoteActivity::class.java)
-            intent.putExtra("noteId", selectedNoteId)
-            startActivity(intent)
-        }
-    }
 
     public fun geoPointConverter(position : String) : GeoPoint{
         val regex = Regex("[-+]?[0-9]*\\.?[0-9]+")
@@ -252,11 +251,8 @@ class MainActivity : AppCompatActivity() {
         addNoteButton.setOnClickListener {
             val intent = Intent(this, CrearNotas::class.java)
             val ubicacionString = ubicacionActual?.latitude.toString() + "," + ubicacionActual?.longitude.toString()
-            intent.putExtra("ubicacion", ubicacionString)  // Pasar la ubicación como cadena//@PrimaryKey(autoGenerate = true)
+            intent.putExtra("posicion", ubicacionString)
             startActivity(intent)
-
-            // Después de agregar una nueva nota, actualiza la lista y notifica al adaptador
-            loadRoomNotes()
         }
     }
 

@@ -20,6 +20,7 @@ import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Locale
+import java.util.UUID
 
 
 class CrearNotas : AppCompatActivity() {
@@ -67,13 +68,26 @@ class CrearNotas : AppCompatActivity() {
                 "propietario" to propietario
             )
 
-            if (isNetworkAvailable()) {
+            if (UtilidadesRed.estaDisponibleRed((this))) {
                 Firebase.firestore.collection("MyNotes")
                     .add(notas)
                     .addOnSuccessListener { documentReference ->
                         val firestoreId = documentReference.id // id de firestore
                         Log.d("TAG", "Documento agregado con ID: $firestoreId")
                         Toast.makeText(this, "La nota se ha creado correctamente", Toast.LENGTH_SHORT).show()
+                        GlobalScope.launch {
+                            val noteEntity = NoteEntity(
+                                id = firestoreId, // Usar el ID de Firestore como ID en Room
+                                nota = nota,
+                                aplicacion = aplicacion,
+                                propietario = propietario,
+                                fecha_registro = fecha_registro,
+                                fecha = fecha.toString(),
+                                posicion = posicion.toString(),
+                                estado = "SiEnviado"
+                            )
+                            noteDao.insert(noteEntity)
+                        }
                     }
                     .addOnFailureListener { e ->
                         Log.w("TAG", "Error al agregar el documento", e)
@@ -81,30 +95,31 @@ class CrearNotas : AppCompatActivity() {
                     }
             } else {
                 GlobalScope.launch {
+                    // id unico
+                    val localNoteId = UUID.randomUUID().toString()
+
                     val noteEntity = NoteEntity(
-                        id = "1",
+                        id = localNoteId,
                         nota = nota,
                         aplicacion = aplicacion,
                         propietario = propietario,
                         fecha_registro = fecha_registro,
                         fecha = fecha.toString(),
                         posicion = posicion.toString(),
-                        //estado = "NoEnviado"
+                        estado = "NoEnviado"
                     )
-                    noteDao.insert(noteEntity)
 
+                    noteDao.insert(noteEntity)
+                    Log.d("MAR", "Local note inserted: $noteEntity")
                 }
+
+
             }
 
             val intent = Intent(this, MainActivity::class.java)
             startActivity(intent)
         }
 
-    }
-    private fun isNetworkAvailable(): Boolean {
-        val connectivityManager = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
-        val networkInfo = connectivityManager.activeNetworkInfo
-        return networkInfo != null && networkInfo.isConnected
     }
 
 }

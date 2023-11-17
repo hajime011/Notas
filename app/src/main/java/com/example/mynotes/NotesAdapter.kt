@@ -4,32 +4,75 @@ import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.Button
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 import com.example.mynotes.EditNoteActivity
 import com.example.mynotes.R
+import com.example.mynotes.application.MyNotesApplication
 import com.example.mynotes.database.entity.NoteEntity
+import com.google.firebase.firestore.FirebaseFirestore
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
+import kotlinx.coroutines.withContext
 
-class NotesAdapter(private val notesList: List<NoteEntity>, private val context: Context) : RecyclerView.Adapter<NotesAdapter.ViewHolder>() {
+class NotesAdapter(private val notesList: MutableList<NoteEntity>, private val context: Context) : RecyclerView.Adapter<NotesAdapter.ViewHolder>() {
 
     inner class ViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         val noteTitle: TextView = itemView.findViewById(R.id.noteTitle)
         val noteContent: TextView = itemView.findViewById(R.id.noteContent)
+        val editButton: Button = itemView.findViewById(R.id.editButton)
+        val deleteButton: Button = itemView.findViewById(R.id.deleteButton)
 
         init {
-            // Agregar un OnClickListener a la vista de CardView
-            itemView.setOnClickListener {
+            editButton.setOnClickListener {
+                // Acción para editar la nota
                 val position = adapterPosition
                 if (position != RecyclerView.NO_POSITION) {
-                    // Obtener la ID de la nota seleccionada según la posición
                     val selectedNoteId = notesList[position].id
-                    Log.d("NotesAdapter", "Selected Note ID: $selectedNoteId")
 
+                    // Iniciar la actividad de edición
                     val intent = Intent(context, EditNoteActivity::class.java)
                     intent.putExtra("noteId", selectedNoteId)
                     context.startActivity(intent)
                 }
             }
+
+
+            deleteButton.setOnClickListener {
+                // Acción para borrar la nota
+                val position = adapterPosition
+                if (position != RecyclerView.NO_POSITION) {
+                    val selectedNote = notesList[position]
+
+                    // Borrar la nota en Firebase
+                    val firestore = FirebaseFirestore.getInstance()
+                    val noteRef = firestore.collection("MyNotes").document(selectedNote.id)
+
+                    GlobalScope.launch(Dispatchers.Main) {
+                        try {
+                            // Elimina la nota en Firebase
+                            noteRef.delete().await()
+
+                            // Elimina la nota local
+                            val myNotesApplication = context.applicationContext as MyNotesApplication
+                            val noteDao = myNotesApplication.appDatabase.noteDao()
+                            noteDao.delete(selectedNote)
+
+                            withContext(Dispatchers.Main) {
+                                notesList.removeAt(position)
+                                notifyItemRemoved(position)
+                                notifyItemRangeChanged(position, itemCount)
+                            }
+                        } catch (e: Exception) {
+                            Log.e("NotesAdapter", "Error deleting note: ${e.message}")
+                        }
+                    }
+                }
+            }
+
         }
     }
 

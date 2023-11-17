@@ -16,7 +16,7 @@ data class NoteEntity(
     val nota: String,
     val posicion: String,
     val propietario: String,
-    //val estado : String
+    var estado : String
 
 )
 

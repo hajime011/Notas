@@ -30,14 +30,4 @@
       app:layout_constraintStart_toStartOf="parent"
       app:layout_constraintTop_toBottomOf="@+id/notaEditar" />
 
-  <Button
-      android:id="@+id/BorrarNotaButton"
-      android:layout_width="wrap_content"
-      android:layout_height="wrap_content"
-      android:layout_marginTop="16dp"
-      android:backgroundTint="#E91E63"
-      android:text="Borrar Nota"
-      app:layout_constraintEnd_toEndOf="parent"
-      app:layout_constraintStart_toStartOf="parent"
-      app:layout_constraintTop_toBottomOf="@+id/EditarNotaButton" />
 </androidx.constraintlayout.widget.ConstraintLayout>

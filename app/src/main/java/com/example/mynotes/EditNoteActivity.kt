@@ -20,7 +20,6 @@ class EditNoteActivity : AppCompatActivity() {
 
     private lateinit var guardarCambiosButton: Button
     private lateinit var notaEditarEditText: EditText
-    private lateinit var borrarNotaButton: Button
 
     private lateinit var noteDao: NoteDao
     private lateinit var noteRef: DocumentReference
@@ -42,7 +41,6 @@ class EditNoteActivity : AppCompatActivity() {
     private fun setupViews() {
         guardarCambiosButton = findViewById(R.id.EditarNotaButton)
         notaEditarEditText = findViewById(R.id.notaEditar)
-        borrarNotaButton = findViewById(R.id.BorrarNotaButton)
     }
 
     private fun retrieveAndPopulateNoteData(noteRef: DocumentReference) {
@@ -51,7 +49,6 @@ class EditNoteActivity : AppCompatActivity() {
                 val nota = document.getString("nota")
                 notaEditarEditText.setText(nota)
                 setupGuardarCambiosButton(noteRef)
-                setupBorrarNotaButton(noteRef)
             }
         }
     }
@@ -61,75 +58,62 @@ class EditNoteActivity : AppCompatActivity() {
 
             val nuevaNota = notaEditarEditText.text.toString()
 
-            // Actualizar la nota localmente
+            // Verificar la disponibilidad de la red
+            if (UtilidadesRed.estaDisponibleRed(this@EditNoteActivity)) {
+                // Actualizar la nota localmente
+                GlobalScope.launch(Dispatchers.IO) {
+                    val localNote = noteDao.getNoteById(noteRef.id)
+                    if (localNote != null) {
+                        val updatedLocalNote = localNote.copy(nota = nuevaNota)
+                        noteDao.update(updatedLocalNote)
+                        Log.d("MAR", "Local note updated: $updatedLocalNote")
 
-            GlobalScope.launch(Dispatchers.IO) {
-                val localNote = noteDao.getNoteById(noteRef.id)
-                if (localNote != null) {
-                    val updatedLocalNote = localNote.copy(nota = nuevaNota)
-
-                    noteDao.insert(updatedLocalNote)
-                    Log.d("MAR", "Local note updated: $updatedLocalNote")
-
-
-                    // Actualizar la nota en Firebase Firestore
-                    noteRef.update("nota", nuevaNota)
-                        .addOnSuccessListener {
-                            runOnUiThread {
-                                Toast.makeText(
-                                    this@EditNoteActivity,
-                                    "La nota se ha editado correctamente",
-                                    Toast.LENGTH_SHORT
-                                ).show()
-                                navigateToMainActivity()
-                            }
-                        }
-                        .addOnFailureListener {
-                            runOnUiThread {
-                                Toast.makeText(
-                                    this@EditNoteActivity,
-                                    "Error al editar la nota en Firebase",
-                                    Toast.LENGTH_SHORT
-                                ).show()
-                            }
-                        }
-                }
-            }
-
-            }
-        }
-
-    private fun setupBorrarNotaButton(noteRef: DocumentReference) {
-        borrarNotaButton.setOnClickListener {
-            if (this@EditNoteActivity::noteRef.isInitialized) {
-                this.noteRef.delete()
-                    .addOnSuccessListener {
-                        val noteId = this.noteRef.id
-                        // Eliminación exitosa en Firebase
-                        GlobalScope.launch(Dispatchers.IO) {
-                            try {
-                                // Elimina la nota local si existe
-                                val localNote = noteDao.getNoteById(noteId)
-                                if (localNote != null) {
-                                    noteDao.delete(localNote)
+                        // Actualizar la nota en Firebase Firestore
+                        noteRef.update("nota", nuevaNota)
+                            .addOnSuccessListener {
+                                runOnUiThread {
+                                    Toast.makeText(
+                                        this@EditNoteActivity,
+                                        "La nota se ha editado correctamente",
+                                        Toast.LENGTH_SHORT
+                                    ).show()
+                                    navigateToMainActivity()
                                 }
-                            } catch (e: Exception) {
-                                Log.e("MAR", "Error al eliminar la nota localmente", e)
                             }
-                        }
+                            .addOnFailureListener {
+                                runOnUiThread {
+                                    Toast.makeText(
+                                        this@EditNoteActivity,
+                                        "Error al editar la nota en Firebase",
+                                        Toast.LENGTH_SHORT
+                                    ).show()
+                                }
+                            }
+                    }
+                }
+            } else {
+                // No hay conexión a Internet
+                // Editar la nota localmente
+                GlobalScope.launch(Dispatchers.IO) {
+                    val localNote = noteDao.getNoteById(noteRef.id)
+                    if (localNote != null) {
+                        val updatedLocalNote = localNote.copy(nota = nuevaNota)
+                        noteDao.update(updatedLocalNote)
+                        Log.d("MAR", "Local note updated: $updatedLocalNote")
                         runOnUiThread {
-                            Toast.makeText(this, "La nota se ha eliminado local y remotamente", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(
+                                this@EditNoteActivity,
+                                "No hay conexión a Internet. Los cambios se guardarán localmente.",
+                                Toast.LENGTH_SHORT
+                            ).show()
                             navigateToMainActivity()
                         }
                     }
-                    .addOnFailureListener { e ->
-                        runOnUiThread {
-                            Toast.makeText(this, "Error al eliminar la nota en Firebase: ${e.message}", Toast.LENGTH_SHORT).show()
-                        }
-                    }
+                }
             }
         }
     }
+
 
     private fun navigateToMainActivity() {
         val intent = Intent(this, MainActivity::class.java)
