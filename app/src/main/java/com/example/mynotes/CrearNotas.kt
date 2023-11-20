@@ -77,7 +77,7 @@ class CrearNotas : AppCompatActivity() {
                         Toast.makeText(this, "La nota se ha creado correctamente", Toast.LENGTH_SHORT).show()
                         GlobalScope.launch {
                             val noteEntity = NoteEntity(
-                                id = firestoreId, // Usar el ID de Firestore como ID en Room
+                                id = firestoreId,
                                 nota = nota,
                                 aplicacion = aplicacion,
                                 propietario = propietario,

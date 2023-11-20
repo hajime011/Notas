@@ -23,6 +23,7 @@ class EditNoteActivity : AppCompatActivity() {
 
     private lateinit var noteDao: NoteDao
     private lateinit var noteRef: DocumentReference
+    private  lateinit var noteId: String
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -31,16 +32,31 @@ class EditNoteActivity : AppCompatActivity() {
         noteDao = myNotesApplication.appDatabase.noteDao()
 
         setupViews()
-        val noteId = intent.getStringExtra("noteId")
-        if (noteId != null) {
-            noteRef = FirebaseFirestore.getInstance().collection("MyNotes").document(noteId)
-            retrieveAndPopulateNoteData(noteRef)
-        }
+        onlineFiebaseId()
+
+
     }
 
     private fun setupViews() {
         guardarCambiosButton = findViewById(R.id.EditarNotaButton)
         notaEditarEditText = findViewById(R.id.notaEditar)
+        noteId = intent.getStringExtra("noteId").toString()
+    }
+
+    private fun onlineFiebaseId(){
+        if(UtilidadesRed.estaDisponibleRed((this))){
+
+            if (noteId != null) {
+                noteRef = FirebaseFirestore.getInstance().collection("MyNotes").document(noteId)
+                retrieveAndPopulateNoteData(noteRef)
+            }
+            }else{
+                    GlobalScope.launch(Dispatchers.IO) {
+                        val localNote = noteDao.getNoteById(noteId)
+                        notaEditarEditText.setText(localNote!!.nota)
+                    }
+
+            }
     }
 
     private fun retrieveAndPopulateNoteData(noteRef: DocumentReference) {
@@ -57,6 +73,7 @@ class EditNoteActivity : AppCompatActivity() {
         guardarCambiosButton.setOnClickListener {
 
             val nuevaNota = notaEditarEditText.text.toString()
+
 
             // Verificar la disponibilidad de la red
             if (UtilidadesRed.estaDisponibleRed(this@EditNoteActivity)) {
@@ -95,12 +112,17 @@ class EditNoteActivity : AppCompatActivity() {
                 // No hay conexión a Internet
                 // Editar la nota localmente
                 GlobalScope.launch(Dispatchers.IO) {
-                    val localNote = noteDao.getNoteById(noteRef.id)
+                    val localNote = noteDao.getNoteById(noteId)
                     if (localNote != null) {
+                        // Crea una nueva nota con la información actualizada
                         val updatedLocalNote = localNote.copy(nota = nuevaNota)
-                        noteDao.update(updatedLocalNote)
-                        Log.d("MAR", "Local note updated: $updatedLocalNote")
+
+
+                        noteDao.insert(updatedLocalNote)
+                        Log.d("MVP", "Local note updated: $updatedLocalNote")
+
                         runOnUiThread {
+                            Log.d("MVP", "No dio: $updatedLocalNote")
                             Toast.makeText(
                                 this@EditNoteActivity,
                                 "No hay conexión a Internet. Los cambios se guardarán localmente.",
@@ -110,6 +132,7 @@ class EditNoteActivity : AppCompatActivity() {
                         }
                     }
                 }
+
             }
         }
     }

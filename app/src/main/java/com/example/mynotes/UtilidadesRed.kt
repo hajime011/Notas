@@ -11,7 +11,6 @@ class UtilidadesRed {
             val informacionRed = gestorConectividad.activeNetworkInfo
             return informacionRed != null && informacionRed.isConnected
 
-
         }
         
     }
