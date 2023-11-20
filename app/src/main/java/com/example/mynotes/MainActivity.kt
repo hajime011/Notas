@@ -1,29 +1,27 @@
 package com.example.mynotes
+
 import NotesAdapter
 import android.Manifest
-import android.annotation.SuppressLint
-import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.net.ConnectivityManager
-import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.util.Log
 import android.widget.Button
 import android.widget.Toast
+import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.mynotes.application.MyNotesApplication
-import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.auth.ktx.auth
-import com.google.firebase.firestore.ktx.firestore
-import com.google.firebase.ktx.Firebase
-import com.google.android.gms.location.FusedLocationProviderClient
-import com.google.android.gms.location.LocationServices
-import com.google.firebase.firestore.GeoPoint
 import com.example.mynotes.database.AppDatabase
 import com.example.mynotes.database.entity.NoteEntity
+import com.google.android.gms.location.FusedLocationProviderClient
+import com.google.android.gms.location.LocationServices
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.ktx.auth
+import com.google.firebase.firestore.GeoPoint
+import com.google.firebase.firestore.ktx.firestore
+import com.google.firebase.ktx.Firebase
 import com.google.firebase.Timestamp
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
@@ -32,38 +30,27 @@ import java.text.ParseException
 import java.text.SimpleDateFormat
 import java.util.Locale
 
-
 class MainActivity : AppCompatActivity() {
     private lateinit var auth: FirebaseAuth
-
-    private val notesMap: MutableMap<String, Any> = mutableMapOf()
-
     private val db = Firebase.firestore
     private val email = "pruebasgoo@coordinadora.com"
     private val password = "Coordi2023"
     private lateinit var addNoteButton: Button
-
-    private  lateinit var  notesListView: RecyclerView
-
+    private lateinit var notesListView: RecyclerView
     private lateinit var fusedLocationClient: FusedLocationProviderClient
-
     private var ubicacionActual: GeoPoint? = null
-
-
     private lateinit var appDatabase: AppDatabase
-
-
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
         setupView()
         permisos()
-        manageButton()
         sessionFirebase()
+        setupListeners()
+        //loadRoomNotes()
         getNotes()
         sincroFirestore()
-        //loadRoomNotes()
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
         obtenerYMostrarUbicacionActual()
     }
@@ -79,29 +66,43 @@ class MainActivity : AppCompatActivity() {
         auth.signInWithEmailAndPassword(email, password)
             .addOnCompleteListener(this) { task ->
                 if (task.isSuccessful) {
-
                     Log.d("TAG", "signInWithEmail:success")
                     val user = auth.currentUser
-
                 } else {
-                    // If sign in fails, displzay a message to the user.
                     Log.w("TAG", "signInWithEmail:failure", task.exception)
-                    Toast.makeText(
-                        baseContext,
-                        "Authentication failed.",
-                        Toast.LENGTH_SHORT,
-                    ).show()
+                    Toast.makeText(baseContext, "Authentication failed.", Toast.LENGTH_SHORT).show()
                 }
             }
     }
 
     private fun permisos() {
-        // Verificar si tienes permiso para acceder a la ubicación
-        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
-
-        } else {
-            // Si no tienes permiso, solicita permiso al usuario
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.ACCESS_FINE_LOCATION), 1)
+        }
+    }
+
+    private fun setupListeners() {
+        addNoteButton.setOnClickListener {
+            val intent = Intent(this, CrearNotas::class.java)
+            val ubicacionString = "${ubicacionActual?.latitude},${ubicacionActual?.longitude}"
+            intent.putExtra("posicion", ubicacionString)
+            startActivity(intent)
+        }
+    }
+
+    private fun obtenerYMostrarUbicacionActual() {
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+            fusedLocationClient.lastLocation
+                .addOnSuccessListener { location ->
+                    if (location != null) {
+                        ubicacionActual = GeoPoint(location.latitude, location.longitude)
+                        Log.d("MAR", "Ubicación actual - Latitud: ${location.latitude}, Longitud: ${location.longitude}")
+                    } else {
+                        Log.w("MAR", "No se pudo obtener la ubicación actual.")
+                    }
+                }
+        } else {
+            Log.w("TAG", "No tienes permiso para acceder a la ubicación.")
         }
     }
     fun getNotes() {
@@ -144,23 +145,6 @@ class MainActivity : AppCompatActivity() {
             loadRoomNotes()
         }
     }
-    public fun obtenerYMostrarUbicacionActual() {
-        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
-            fusedLocationClient.lastLocation
-                .addOnSuccessListener { location ->
-                    if (location != null) {
-                        val latitud = location.latitude
-                        val longitud = location.longitude
-                        ubicacionActual = GeoPoint(latitud, longitud)
-                        Log.d("MAR", "Ubicación actual - Latitud: $latitud, Longitud: $longitud")
-                    } else {
-                        Log.w("MAR", "No se pudo obtener la ubicación actual.")
-                    }
-                }
-        } else {
-            Log.w("TAG", "No tienes permiso para acceder a la ubicación.")
-        }
-    }
     private fun loadRoomNotes() {
         GlobalScope.launch(Dispatchers.IO) {
             val roomNotes: List<NoteEntity> = appDatabase.noteDao().getAllNotes()
@@ -169,40 +153,6 @@ class MainActivity : AppCompatActivity() {
             }
         }
     }
-    private fun sincroFirestore() {
-        GlobalScope.launch(Dispatchers.IO) {
-            val localNotes = appDatabase.noteDao().getAllNotes()
-
-            for (localNote in localNotes) {
-                if (localNote.estado == "NoEnviado") {
-                    val noteData = hashMapOf(
-                        "aplicacion" to localNote.aplicacion,
-                        "fecha" to converterStringAtTimestamp(localNote.fecha),
-                        "fecha_registro" to localNote.fecha_registro,
-                        "nota" to localNote.nota,
-                        "posicion" to geoPointConverter(localNote.posicion),
-                        "propietario" to localNote.propietario,
-                    )
-
-                    //firestore
-                    db.collection(CONSTANTES.COLLECTION_NOTES)
-                        .add(noteData)
-                        .addOnSuccessListener { documentReference ->
-                            GlobalScope.launch(Dispatchers.IO) {
-                                // Actualiza el estado de la nota local en Room
-                                localNote.estado = "SiEnviado"
-                                appDatabase.noteDao().update(localNote)
-                                Log.d("MAR", "Note synced to Firebase: $localNote")
-                            }
-                        }
-                        .addOnFailureListener { e ->
-                            Log.e("MAR", "Error syncing note to Firebase: ${e.message}")
-                        }
-                }
-            }
-        }
-    }
-
 
     private fun listRoomNotes(roomNotes: List<NoteEntity>) {
         val mutableRoomNotes: MutableList<NoteEntity> = roomNotes.toMutableList()
@@ -217,20 +167,49 @@ class MainActivity : AppCompatActivity() {
     }
 
 
+    private fun sincroFirestore() {
+        GlobalScope.launch(Dispatchers.IO) {
+            val localNotes = appDatabase.noteDao().getAllNotes()
 
-    public fun geoPointConverter(position : String) : GeoPoint{
-        val regex = Regex("[-+]?[0-9]*\\.?[0-9]+")
-        val matches = regex.findAll(position)
-        val coordinates = matches.map { it.value.toDouble() }.toList()
-        return if (coordinates.size == 2) {
-            GeoPoint(coordinates[0], coordinates[1])
-        } else {
-            GeoPoint(0.0, 0.0)
+            for (localNote in localNotes) {
+                if (localNote.estado == "NoEnviado") {
+                    syncNoteWithFirebase(localNote)
+                }
+            }
+
+            // Delete local notes with SiEnviado status
+            appDatabase.noteDao().deleteSiEnviadoNotes()
+            Log.d("MAR", "SiEnviado notes deleted locally.")
         }
     }
 
-    @SuppressLint("SimpleDateFormat")
-    fun converterStringAtTimestamp(fecha : String) : Timestamp {
+    private fun syncNoteWithFirebase(localNote: NoteEntity) {
+        val noteData = hashMapOf(
+            "aplicacion" to localNote.aplicacion,
+            "fecha" to converterStringAtTimestamp(localNote.fecha),
+            "fecha_registro" to localNote.fecha_registro,
+            "nota" to localNote.nota,
+            "posicion" to geoPointConverter(localNote.posicion),
+            "propietario" to localNote.propietario,
+        )
+
+        db.collection(CONSTANTES.COLLECTION_NOTES)
+            .add(noteData)
+            .addOnSuccessListener { documentReference ->
+                GlobalScope.launch(Dispatchers.IO) {
+                    // Update the status of the local note in Room to SiEnviado
+                    localNote.estado = "SiEnviado"
+                    appDatabase.noteDao().update(localNote)
+                    Log.d("MAR", "Note synced to Firebase: $localNote")
+                }
+            }
+            .addOnFailureListener { e ->
+                Log.e("MAR", "Error syncing note to Firebase: ${e.message}")
+            }
+    }
+
+
+    private fun converterStringAtTimestamp(fecha: String): Timestamp {
         val dateFormat = SimpleDateFormat("EEE MMM dd HH:mm:ss 'GMT'Z yyyy", Locale.US)
         try {
             val fechaHoraDate = dateFormat.parse(fecha)
@@ -244,16 +223,14 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-
-
-
-    private fun manageButton() {
-        addNoteButton.setOnClickListener {
-            val intent = Intent(this, CrearNotas::class.java)
-            val ubicacionString = ubicacionActual?.latitude.toString() + "," + ubicacionActual?.longitude.toString()
-            intent.putExtra("posicion", ubicacionString)
-            startActivity(intent)
+    private fun geoPointConverter(position: String): GeoPoint {
+        val regex = Regex("[-+]?[0-9]*\\.?[0-9]+")
+        val matches = regex.findAll(position)
+        val coordinates = matches.map { it.value.toDouble() }.toList()
+        return if (coordinates.size == 2) {
+            GeoPoint(coordinates[0], coordinates[1])
+        } else {
+            GeoPoint(0.0, 0.0)
         }
     }
-
 }

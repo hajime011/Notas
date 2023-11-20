@@ -28,6 +28,9 @@ interface NoteDao {
 
     @Update
     suspend fun update(noteEntity: NoteEntity)
+    @Query("DELETE FROM mynotes WHERE estado = 'SiEnviado'")
+    suspend fun deleteSiEnviadoNotes()
+
 
 
 

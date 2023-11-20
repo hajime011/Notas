@@ -41,7 +41,6 @@ class NotesAdapter(private val notesList: MutableList<NoteEntity>, private val c
                     // Iniciar la actividad de edición
                     val intent = Intent(context, EditNoteActivity::class.java)
                     intent.putExtra("noteId", selectedNoteId)
-                    val noteId = intent.getStringExtra("noteId").toString()
                     context.startActivity(intent)
                 }
             }

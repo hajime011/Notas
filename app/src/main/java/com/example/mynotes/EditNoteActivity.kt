@@ -9,7 +9,7 @@ import android.widget.EditText
 import android.widget.Toast
 import com.example.mynotes.application.MyNotesApplication
 import com.example.mynotes.database.dao.NoteDao
-import com.google.firebase.firestore.DocumentReference
+import com.example.mynotes.database.entity.NoteEntity
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
@@ -22,8 +22,7 @@ class EditNoteActivity : AppCompatActivity() {
     private lateinit var notaEditarEditText: EditText
 
     private lateinit var noteDao: NoteDao
-    private lateinit var noteRef: DocumentReference
-    private  lateinit var noteId: String
+    private lateinit var noteId: String
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -32,8 +31,7 @@ class EditNoteActivity : AppCompatActivity() {
         noteDao = myNotesApplication.appDatabase.noteDao()
 
         setupViews()
-        onlineFiebaseId()
-
+        loadLocalNote()
 
     }
 
@@ -43,100 +41,78 @@ class EditNoteActivity : AppCompatActivity() {
         noteId = intent.getStringExtra("noteId").toString()
     }
 
-    private fun onlineFiebaseId(){
-        if(UtilidadesRed.estaDisponibleRed((this))){
-
-            if (noteId != null) {
-                noteRef = FirebaseFirestore.getInstance().collection("MyNotes").document(noteId)
-                retrieveAndPopulateNoteData(noteRef)
-            }
-            }else{
-                    GlobalScope.launch(Dispatchers.IO) {
-                        val localNote = noteDao.getNoteById(noteId)
-                        notaEditarEditText.setText(localNote!!.nota)
-                    }
-
-            }
-    }
-
-    private fun retrieveAndPopulateNoteData(noteRef: DocumentReference) {
-        noteRef.get().addOnSuccessListener { document ->
-            if (document.exists()) {
-                val nota = document.getString("nota")
-                notaEditarEditText.setText(nota)
-                setupGuardarCambiosButton(noteRef)
+    private fun loadLocalNote() {
+        GlobalScope.launch(Dispatchers.IO) {
+            val localNote = noteDao.getNoteById(noteId)
+            if (localNote != null) {
+                withContext(Dispatchers.Main) {
+                    notaEditarEditText.setText(localNote.nota)
+                    setupGuardarCambiosButton(localNote)
+                }
             }
         }
     }
 
-    private fun setupGuardarCambiosButton(noteRef: DocumentReference) {
+    private fun setupGuardarCambiosButton(localNote: NoteEntity) {
         guardarCambiosButton.setOnClickListener {
 
             val nuevaNota = notaEditarEditText.text.toString()
 
+            GlobalScope.launch(Dispatchers.IO) {
+                try {
+                    val updatedLocalNote = localNote.copy(nota = nuevaNota)
+                    noteDao.update(updatedLocalNote)
 
-            // Verificar la disponibilidad de la red
-            if (UtilidadesRed.estaDisponibleRed(this@EditNoteActivity)) {
-                // Actualizar la nota localmente
-                GlobalScope.launch(Dispatchers.IO) {
-                    val localNote = noteDao.getNoteById(noteRef.id)
-                    if (localNote != null) {
-                        val updatedLocalNote = localNote.copy(nota = nuevaNota)
-                        noteDao.update(updatedLocalNote)
-                        Log.d("MAR", "Local note updated: $updatedLocalNote")
+                    withContext(Dispatchers.Main) {
+                        Toast.makeText(
+                            this@EditNoteActivity,
+                            "Cambios guardados localmente.",
+                            Toast.LENGTH_SHORT
+                        ).show()
 
-                        // Actualizar la nota en Firebase Firestore
-                        noteRef.update("nota", nuevaNota)
-                            .addOnSuccessListener {
-                                runOnUiThread {
-                                    Toast.makeText(
-                                        this@EditNoteActivity,
-                                        "La nota se ha editado correctamente",
-                                        Toast.LENGTH_SHORT
-                                    ).show()
-                                    navigateToMainActivity()
-                                }
-                            }
-                            .addOnFailureListener {
-                                runOnUiThread {
-                                    Toast.makeText(
-                                        this@EditNoteActivity,
-                                        "Error al editar la nota en Firebase",
-                                        Toast.LENGTH_SHORT
-                                    ).show()
-                                }
-                            }
-                    }
-                }
-            } else {
-                // No hay conexión a Internet
-                // Editar la nota localmente
-                GlobalScope.launch(Dispatchers.IO) {
-                    val localNote = noteDao.getNoteById(noteId)
-                    if (localNote != null) {
-                        // Crea una nueva nota con la información actualizada
-                        val updatedLocalNote = localNote.copy(nota = nuevaNota)
-
-
-                        noteDao.insert(updatedLocalNote)
-                        Log.d("MVP", "Local note updated: $updatedLocalNote")
-
-                        runOnUiThread {
-                            Log.d("MVP", "No dio: $updatedLocalNote")
-                            Toast.makeText(
-                                this@EditNoteActivity,
-                                "No hay conexión a Internet. Los cambios se guardarán localmente.",
-                                Toast.LENGTH_SHORT
-                            ).show()
+                        if (UtilidadesRed.estaDisponibleRed(this@EditNoteActivity)) {
+                            updateNoteInFirestore(updatedLocalNote)
+                        } else {
                             navigateToMainActivity()
                         }
                     }
-                }
 
+                } catch (e: Exception) {
+                    withContext(Dispatchers.Main) {
+                        Log.e("Maracuya", "Error: ${e.message}")
+                        // Maneja el error según tus necesidades
+                    }
+                }
             }
         }
     }
 
+    private fun updateNoteInFirestore(updatedLocalNote: NoteEntity) {
+        val db = FirebaseFirestore.getInstance()
+        val noteRef = db.collection("MyNotes").document(updatedLocalNote.id)
+
+        noteRef.update("nota", updatedLocalNote.nota)
+            .addOnSuccessListener {
+                runOnUiThread {
+                    Toast.makeText(
+                        this@EditNoteActivity,
+                        "Cambios guardados en Firestore.",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                    navigateToMainActivity()
+                }
+            }
+            .addOnFailureListener {
+                runOnUiThread {
+                    Toast.makeText(
+                        this@EditNoteActivity,
+                        "Error al guardar cambios en Firestore.",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                    navigateToMainActivity()
+                }
+            }
+    }
 
     private fun navigateToMainActivity() {
         val intent = Intent(this, MainActivity::class.java)

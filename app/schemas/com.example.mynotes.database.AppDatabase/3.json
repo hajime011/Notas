@@ -2,21 +2,15 @@
   "formatVersion": 1,
   "database": {
     "version": 3,
-    "identityHash": "2d31cee8d9298ad29aa666d80e68e487",
+    "identityHash": "92e0b17b58497a5f5c83cc322b3c05fe",
     "entities": [
       {
         "tableName": "mynotes",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `nota` TEXT NOT NULL, `aplicacion` TEXT NOT NULL, `propietario` TEXT NOT NULL, `fecha_registro` TEXT NOT NULL, `fecha` TEXT NOT NULL, `posicion` TEXT NOT NULL, PRIMARY KEY(`id`))",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `aplicacion` TEXT NOT NULL, `fecha` TEXT NOT NULL, `fecha_registro` TEXT NOT NULL, `nota` TEXT NOT NULL, `posicion` TEXT NOT NULL, `propietario` TEXT NOT NULL, `estado` TEXT NOT NULL, PRIMARY KEY(`id`))",
         "fields": [
           {
             "fieldPath": "id",
             "columnName": "id",
-            "affinity": "TEXT",
-            "notNull": true
-          },
-          {
-            "fieldPath": "nota",
-            "columnName": "nota",
             "affinity": "TEXT",
             "notNull": true
           },
@@ -27,8 +21,8 @@
             "notNull": true
           },
           {
-            "fieldPath": "propietario",
-            "columnName": "propietario",
+            "fieldPath": "fecha",
+            "columnName": "fecha",
             "affinity": "TEXT",
             "notNull": true
           },
@@ -39,14 +33,26 @@
             "notNull": true
           },
           {
-            "fieldPath": "fecha",
-            "columnName": "fecha",
+            "fieldPath": "nota",
+            "columnName": "nota",
             "affinity": "TEXT",
             "notNull": true
           },
           {
             "fieldPath": "posicion",
             "columnName": "posicion",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "propietario",
+            "columnName": "propietario",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "estado",
+            "columnName": "estado",
             "affinity": "TEXT",
             "notNull": true
           }
@@ -64,7 +70,7 @@
     "views": [],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '2d31cee8d9298ad29aa666d80e68e487')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '92e0b17b58497a5f5c83cc322b3c05fe')"
     ]
   }
 }
