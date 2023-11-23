@@ -123,7 +123,7 @@ class MainActivity : AppCompatActivity() {
                                 document.getString("nota").toString(),
                                 document.getGeoPoint("posicion").toString(),
                                 document.getString("propietario").toString(),
-                                document.getString("estado").toString()
+                                "SiEnviado"
                             )
                             lista.add(data)
                             GlobalScope.launch(Dispatchers.IO) {
@@ -150,6 +150,7 @@ class MainActivity : AppCompatActivity() {
             val roomNotes: List<NoteEntity> = appDatabase.noteDao().getAllNotes()
             runOnUiThread {
                 listRoomNotes(roomNotes)
+
             }
         }
     }
@@ -172,16 +173,46 @@ class MainActivity : AppCompatActivity() {
             val localNotes = appDatabase.noteDao().getAllNotes()
 
             for (localNote in localNotes) {
-                if (localNote.estado == "NoEnviado") {
-                    syncNoteWithFirebase(localNote)
+                when (localNote.estado) {
+                    "Borrado" -> {
+                        syncNoteWithFirebase(localNote)
+                    }
+                    "Editado" -> {
+                        // Sincroniza las notas editadas
+                        syncEditedNoteWithFirebase(localNote)
+                    }
                 }
             }
 
-            // Delete local notes with SiEnviado status
             appDatabase.noteDao().deleteSiEnviadoNotes()
-            Log.d("MAR", "SiEnviado notes deleted locally.")
+            Log.d("MAR", "Borrado notes deleted locally.")
         }
     }
+    private fun syncEditedNoteWithFirebase(localNote: NoteEntity) {
+        val noteData = hashMapOf(
+            "aplicacion" to localNote.aplicacion,
+            "fecha" to converterStringAtTimestamp(localNote.fecha),
+            "fecha_registro" to localNote.fecha_registro,
+            "nota" to localNote.nota,
+            "posicion" to geoPointConverter(localNote.posicion),
+            "propietario" to localNote.propietario,
+        )
+
+        db.collection(CONSTANTES.COLLECTION_NOTES)
+            .document(localNote.id)
+            .set(noteData)
+            .addOnSuccessListener { documentReference ->
+                GlobalScope.launch(Dispatchers.IO) {
+                    localNote.estado = "SiEnviado"
+                    appDatabase.noteDao().update(localNote)
+                    Log.d("MAR", "Edited note synced to Firebase: $localNote")
+                }
+            }
+            .addOnFailureListener { e ->
+                Log.e("MAR", "Error syncing edited note to Firebase: ${e.message}")
+            }
+    }
+
 
     private fun syncNoteWithFirebase(localNote: NoteEntity) {
         val noteData = hashMapOf(
@@ -194,10 +225,10 @@ class MainActivity : AppCompatActivity() {
         )
 
         db.collection(CONSTANTES.COLLECTION_NOTES)
-            .add(noteData)
+            .document(localNote.id)
+            .set(noteData)
             .addOnSuccessListener { documentReference ->
                 GlobalScope.launch(Dispatchers.IO) {
-                    // Update the status of the local note in Room to SiEnviado
                     localNote.estado = "SiEnviado"
                     appDatabase.noteDao().update(localNote)
                     Log.d("MAR", "Note synced to Firebase: $localNote")

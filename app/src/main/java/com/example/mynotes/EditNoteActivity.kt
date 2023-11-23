@@ -60,7 +60,7 @@ class EditNoteActivity : AppCompatActivity() {
 
             GlobalScope.launch(Dispatchers.IO) {
                 try {
-                    val updatedLocalNote = localNote.copy(nota = nuevaNota)
+                    val updatedLocalNote = localNote.copy(nota = nuevaNota, estado = "Editado")
                     noteDao.update(updatedLocalNote)
 
                     withContext(Dispatchers.Main) {
@@ -80,7 +80,6 @@ class EditNoteActivity : AppCompatActivity() {
                 } catch (e: Exception) {
                     withContext(Dispatchers.Main) {
                         Log.e("Maracuya", "Error: ${e.message}")
-                        // Maneja el error según tus necesidades
                     }
                 }
             }
