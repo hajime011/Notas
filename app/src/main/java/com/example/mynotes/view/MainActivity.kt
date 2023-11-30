@@ -32,6 +32,8 @@ import com.google.firebase.Timestamp
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
+import kotlinx.coroutines.withContext
 import java.text.ParseException
 import java.text.SimpleDateFormat
 import java.util.Locale
@@ -57,8 +59,8 @@ class MainActivity : AppCompatActivity() {
         sessionFirebase()
         setupListeners()
         //loadRoomNotes()
-        getNotes()
         sincroFirestore()
+        getNotes()
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
         obtenerYMostrarUbicacionActual()
     }
@@ -112,7 +114,7 @@ class MainActivity : AppCompatActivity() {
             val propietario = "Cristian D"
             val fecha = Timestamp.now()
             val dateFormat = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
-            val posicion =ubicacionActual
+            val posicion = ubicacionActual
             val fecha_registro = dateFormat.format(fecha.toDate())
 
             if (UtilidadesRed.estaDisponibleRed(this)) {
@@ -131,6 +133,7 @@ class MainActivity : AppCompatActivity() {
                         val firestoreId = documentReference.id // id del firestore
                         Log.d("TAG", "Documento agregado con ID: $firestoreId")
                         Toast.makeText(this, "La nota se ha creado correctamente", Toast.LENGTH_SHORT).show()
+
                         GlobalScope.launch {
                             val noteEntity = NoteEntity(
                                 id = firestoreId,
@@ -151,31 +154,37 @@ class MainActivity : AppCompatActivity() {
                         Toast.makeText(this, "Error al agregar la nota en Firebase", Toast.LENGTH_SHORT).show()
                     }
             } else {
+                // Almacenar la nota localmente si no hay conexión
+                val localNoteId = UUID.randomUUID().toString()
+
+                val noteEntity = NoteEntity(
+                    id = localNoteId,
+                    nota = nuevaNota,
+                    aplicacion = aplicacion,
+                    propietario = propietario,
+                    fecha_registro = fecha_registro,
+                    fecha = fecha.toString(),
+                    posicion = posicion.toString(),
+                    estado = "NoEnviado"
+                )
+
                 GlobalScope.launch {
-                    // id unico
-                    val localNoteId = UUID.randomUUID().toString()
-
-                    val noteEntity = NoteEntity(
-                        id = localNoteId,
-                        nota = nuevaNota,
-                        aplicacion = aplicacion,
-                        propietario = propietario,
-                        fecha_registro = fecha_registro,
-                        fecha = fecha.toString(),
-                        posicion = posicion.toString(),
-                        estado = "NoEnviado"
-                    )
-
-                    noteDao.insert(noteEntity)
+                    (application as MyNotesApplication).appDatabase.noteDao().insert(noteEntity)
                     Log.d("MAR", "Local note inserted: $noteEntity")
+                    withContext(Dispatchers.Main) {
+                        loadRoomNotes()
+                    }
                 }
 
 
+                Toast.makeText(this@MainActivity, "La nota se ha guardado localmente", Toast.LENGTH_SHORT).show()
+                dialog.dismiss()
             }
         }
 
         dialog.show()
     }
+
 
 
     private fun obtenerYMostrarUbicacionActual() {
@@ -218,13 +227,13 @@ class MainActivity : AppCompatActivity() {
                                 (appDatabase).noteDao()
                                     .insert(data)
                             }
-                        }
-                        //loadRoomNotes()
+                            val adapter = NotesAdapter(lista, this)
+                            notesListView.layoutManager = LinearLayoutManager(this)
+                            notesListView.adapter = adapter
+                            adapter.notifyDataSetChanged()
 
-                        val adapter = NotesAdapter(lista, this)
-                        notesListView.layoutManager = LinearLayoutManager(this)
-                        notesListView.adapter = adapter
-                        adapter.notifyDataSetChanged()
+                        }
+                        loadRoomNotes()
                     }
                 }.addOnFailureListener {
                     Log.i("ERROR", it.message.toString())
@@ -233,6 +242,8 @@ class MainActivity : AppCompatActivity() {
 //            OFFLINE
             loadRoomNotes()
         }
+
+
     }
     private fun loadRoomNotes() {
         GlobalScope.launch(Dispatchers.IO) {
@@ -262,20 +273,22 @@ class MainActivity : AppCompatActivity() {
         GlobalScope.launch(Dispatchers.IO) {
             val localNotes = appDatabase.noteDao().getAllNotes()
 
+
+
             for (localNote in localNotes) {
                 when (localNote.estado) {
                     "Borrado" -> {
-                        syncNoteWithFirebase(localNote)
+                        syncNoteDeleteFirebase(localNote,this@MainActivity)
                     }
+
                     "Editado" -> {
-                        // Sincroniza las notas editadas
                         syncEditedNoteWithFirebase(localNote)
+                    }
+                    "NoEnviado"->{
+                        syncNoteWithFirebase(localNote)
                     }
                 }
             }
-
-            appDatabase.noteDao().deleteSiEnviadoNotes()
-            Log.d("MAR", "Borrado notes deleted locally.")
         }
     }
     private fun syncEditedNoteWithFirebase(localNote: NoteEntity) {
@@ -302,6 +315,28 @@ class MainActivity : AppCompatActivity() {
                 Log.e("MAR", "Error syncing edited note to Firebase: ${e.message}")
             }
     }
+    private suspend fun syncNoteDeleteFirebase(localNote: NoteEntity,mainActivity: MainActivity) {
+        // Aquí obtienes la referencia del documento en Firestore usando el ID de la nota
+        val noteDocumentReference = db.collection(CONSTANTES.COLLECTION_NOTES).document(localNote.id)
+
+        try {
+            // Eliminas el documento de Firestore
+            noteDocumentReference.delete().addOnCompleteListener{
+                if (it.isSuccessful){
+                    mainActivity.getNotes()
+                }
+            }.addOnFailureListener{
+
+            }.await()
+            //borra
+            appDatabase.noteDao().deleteSiEnviadoNotes()
+            Log.d("MAR", "Deleted note locally: $localNote")
+        } catch (e: Exception) {
+            Log.e("MAR", "Error deleting note in Firestore: ${e.message}")
+        }
+    }
+
+
 
 
     private fun syncNoteWithFirebase(localNote: NoteEntity) {

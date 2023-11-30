@@ -1,8 +1,4 @@
 package com.example.mynotes.adapter
-
-
-import android.content.Context
-import android.content.Intent
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
@@ -10,18 +6,10 @@ import android.view.ViewGroup
 import android.widget.Button
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
-import com.example.mynotes.view.EditNoteActivity
 import com.example.mynotes.R
 import com.example.mynotes.database.entity.NoteEntity
 import com.example.mynotes.presenter.MyNotesPresenter
 import com.example.mynotes.view.MainActivity
-
-
-
-
-
-
-
 
 class NotesAdapter(private val notesList: MutableList<NoteEntity>, private val mainActivity: MainActivity) : RecyclerView.Adapter<NotesAdapter.ViewHolder>() {
     private var myNotesPresenter = MyNotesPresenter()
