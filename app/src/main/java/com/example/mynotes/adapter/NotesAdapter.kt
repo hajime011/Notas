@@ -72,18 +72,11 @@ class NotesAdapter(private val notesList: MutableList<NoteEntity>, private val m
         val positionNotes = position + 1
 
 
-        Log.d("com.example.mynotes.adapter.NotesAdapter", "onBindViewHolder called for position $position")
-
-
-        val registrationDate = note.fecha_registro
-        val content = note.nota
-
-
-        val formattedNote = "Fecha de Registro: $registrationDate\nNota: $content"
+        Log.d("Hola", "onBindViewHolder called for position $position")
 
 
         holder.noteTitle.text = "Nota $positionNotes"
-        holder.noteContent.text = formattedNote
+        holder.noteContent.text = note.nota
     }
 
 
