@@ -34,17 +34,8 @@ class NotesAdapter(private val notesList: MutableList<NoteEntity>, private val m
 
         init {
             editButton.setOnClickListener {
-                // Acción para editar la nota
-                val position = adapterPosition
-                if (position != RecyclerView.NO_POSITION) {
-                    val selectedNoteId = notesList[position].id
-
-
-                    // Iniciar la actividad de edición
-                    val intent = Intent(mainActivity, EditNoteActivity::class.java)
-                    intent.putExtra("noteId", selectedNoteId)
-                    mainActivity.startActivity(intent)
-                }
+                val editedNoteContent = noteContent.text.toString()
+                myNotesPresenter.editarNotas(notesList[adapterPosition].id, editedNoteContent, mainActivity)
             }
 
 

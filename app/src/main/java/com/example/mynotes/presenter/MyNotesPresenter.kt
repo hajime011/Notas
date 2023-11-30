@@ -62,4 +62,46 @@ class MyNotesPresenter {
 
 
     }
+    fun editarNotas(id: String, nuevaNota: String, mainActivity: MainActivity) {
+        if (UtilidadesRed.estaDisponibleRed(mainActivity)) {
+            GlobalScope.launch(Dispatchers.Main) {
+                try {
+                    // Actualizar la nota en Firebase
+                    val firestore = FirebaseFirestore.getInstance()
+                    val noteRef = firestore.collection(CONSTANTES.COLLECTION_NOTES).document(id)
+                    noteRef.update("nota", nuevaNota, "estado", "Editado").addOnCompleteListener {
+                        if (it.isSuccessful) {
+                            mainActivity.getNotes()
+                        }
+                    }.addOnFailureListener {
+                        Log.e("Error updating note", it.message.toString())
+                    }.await()
+                } catch (e: Exception) {
+                    Log.e("com.example.mynotes.adapter.NotesAdapter", "Error updating note: ${e.message}")
+                    Toast.makeText(
+                        mainActivity,
+                        "Error al actualizar la nota. Verifica tu conexión a Internet",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+            }
+        } else {
+            // Actualizar la nota localmente
+            val myNotesApplication = mainActivity.applicationContext as MyNotesApplication
+            val noteDao = myNotesApplication.appDatabase.noteDao()
+            GlobalScope.launch(Dispatchers.Main) {
+                noteDao.updateNoteContentAndStateById(id, nuevaNota, "Editado")
+
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(
+                        mainActivity,
+                        "No hay conexión a Internet. La nota se actualizó localmente",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+            }
+        }
+    }
+
+
 }

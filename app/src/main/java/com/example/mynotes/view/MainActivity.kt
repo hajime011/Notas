@@ -7,7 +7,9 @@ import android.content.pm.PackageManager
 import android.os.Bundle
 import android.util.Log
 import android.widget.Button
+import android.widget.EditText
 import android.widget.Toast
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -15,6 +17,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.example.mynotes.R
 import com.example.mynotes.application.MyNotesApplication
 import com.example.mynotes.database.AppDatabase
+import com.example.mynotes.database.dao.NoteDao
 import com.example.mynotes.database.entity.NoteEntity
 import com.example.mynotes.util.CONSTANTES
 import com.example.mynotes.util.UtilidadesRed
@@ -32,6 +35,7 @@ import kotlinx.coroutines.launch
 import java.text.ParseException
 import java.text.SimpleDateFormat
 import java.util.Locale
+import java.util.UUID
 
 class MainActivity : AppCompatActivity() {
     private lateinit var auth: FirebaseAuth
@@ -43,6 +47,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var fusedLocationClient: FusedLocationProviderClient
     private var ubicacionActual: GeoPoint? = null
     private lateinit var appDatabase: AppDatabase
+    private lateinit var noteDao: NoteDao
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -86,12 +91,92 @@ class MainActivity : AppCompatActivity() {
 
     private fun setupListeners() {
         addNoteButton.setOnClickListener {
-            val intent = Intent(this, CrearNotas::class.java)
-            val ubicacionString = "${ubicacionActual?.latitude},${ubicacionActual?.longitude}"
-            intent.putExtra("posicion", ubicacionString)
-            startActivity(intent)
+            // Mostrar el diálogo de creación de notas
+            mostrarDialogoCrearNotas()
         }
     }
+    private fun mostrarDialogoCrearNotas() {
+        val builder = AlertDialog.Builder(this)
+        val inflater = layoutInflater
+        val dialogView = inflater.inflate(R.layout.dialog_crear_notas, null)
+        builder.setView(dialogView)
+
+        val nuevaNotaEditText = dialogView.findViewById<EditText>(R.id.nuevaNotaEditText)
+        val guardarNotaButton = dialogView.findViewById<Button>(R.id.guardarNotaButton)
+
+        val dialog = builder.create()
+
+        guardarNotaButton.setOnClickListener {
+            val nuevaNota = nuevaNotaEditText.text.toString()
+            val aplicacion = "Mobil"
+            val propietario = "Cristian D"
+            val fecha = Timestamp.now()
+            val dateFormat = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
+            val posicion =ubicacionActual
+            val fecha_registro = dateFormat.format(fecha.toDate())
+
+            if (UtilidadesRed.estaDisponibleRed(this)) {
+                val notas = hashMapOf(
+                    "aplicacion" to aplicacion,
+                    "fecha" to fecha,
+                    "fecha_registro" to fecha_registro,
+                    "nota" to nuevaNota,
+                    "posicion" to posicion,
+                    "propietario" to propietario
+                )
+
+                Firebase.firestore.collection(CONSTANTES.COLLECTION_NOTES)
+                    .add(notas)
+                    .addOnSuccessListener { documentReference ->
+                        val firestoreId = documentReference.id // id del firestore
+                        Log.d("TAG", "Documento agregado con ID: $firestoreId")
+                        Toast.makeText(this, "La nota se ha creado correctamente", Toast.LENGTH_SHORT).show()
+                        GlobalScope.launch {
+                            val noteEntity = NoteEntity(
+                                id = firestoreId,
+                                nota = nuevaNota,
+                                aplicacion = aplicacion,
+                                propietario = propietario,
+                                fecha_registro = fecha_registro,
+                                fecha = fecha.toString(),
+                                posicion = posicion.toString(),
+                                estado = "SiEnviado"
+                            )
+                            (application as MyNotesApplication).appDatabase.noteDao().insert(noteEntity)
+                        }
+                        dialog.dismiss()
+                    }
+                    .addOnFailureListener { e ->
+                        Log.w("TAG", "Error al agregar el documento", e)
+                        Toast.makeText(this, "Error al agregar la nota en Firebase", Toast.LENGTH_SHORT).show()
+                    }
+            } else {
+                GlobalScope.launch {
+                    // id unico
+                    val localNoteId = UUID.randomUUID().toString()
+
+                    val noteEntity = NoteEntity(
+                        id = localNoteId,
+                        nota = nuevaNota,
+                        aplicacion = aplicacion,
+                        propietario = propietario,
+                        fecha_registro = fecha_registro,
+                        fecha = fecha.toString(),
+                        posicion = posicion.toString(),
+                        estado = "NoEnviado"
+                    )
+
+                    noteDao.insert(noteEntity)
+                    Log.d("MAR", "Local note inserted: $noteEntity")
+                }
+
+
+            }
+        }
+
+        dialog.show()
+    }
+
 
     private fun obtenerYMostrarUbicacionActual() {
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
