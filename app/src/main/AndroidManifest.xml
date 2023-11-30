@@ -18,14 +18,14 @@
         android:theme="@style/Theme.MyNotes"
         tools:targetApi="31" >
         <activity
-            android:name=".EditNoteActivity"
+            android:name=".view.EditNoteActivity"
             android:label="Edit Note Activity"
             android:exported="true" />
         <activity
-            android:name=".CrearNotas"
+            android:name=".view.CrearNotas"
             android:exported="false" />
         <activity
-            android:name=".MainActivity"
+            android:name=".view.MainActivity"
             android:exported="true" >
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />

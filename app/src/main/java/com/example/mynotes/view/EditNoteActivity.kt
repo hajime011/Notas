@@ -1,4 +1,4 @@
-package com.example.mynotes
+package com.example.mynotes.view
 
 import android.content.Intent
 import androidx.appcompat.app.AppCompatActivity
@@ -7,9 +7,11 @@ import android.util.Log
 import android.widget.Button
 import android.widget.EditText
 import android.widget.Toast
+import com.example.mynotes.R
 import com.example.mynotes.application.MyNotesApplication
 import com.example.mynotes.database.dao.NoteDao
 import com.example.mynotes.database.entity.NoteEntity
+import com.example.mynotes.util.UtilidadesRed
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope

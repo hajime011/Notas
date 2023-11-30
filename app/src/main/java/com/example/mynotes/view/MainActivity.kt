@@ -1,6 +1,6 @@
-package com.example.mynotes
+package com.example.mynotes.view
 
-import NotesAdapter
+import com.example.mynotes.adapter.NotesAdapter
 import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -12,9 +12,12 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.example.mynotes.R
 import com.example.mynotes.application.MyNotesApplication
 import com.example.mynotes.database.AppDatabase
 import com.example.mynotes.database.entity.NoteEntity
+import com.example.mynotes.util.CONSTANTES
+import com.example.mynotes.util.UtilidadesRed
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationServices
 import com.google.firebase.auth.FirebaseAuth
@@ -136,6 +139,7 @@ class MainActivity : AppCompatActivity() {
                         val adapter = NotesAdapter(lista, this)
                         notesListView.layoutManager = LinearLayoutManager(this)
                         notesListView.adapter = adapter
+                        adapter.notifyDataSetChanged()
                     }
                 }.addOnFailureListener {
                     Log.i("ERROR", it.message.toString())
@@ -160,6 +164,7 @@ class MainActivity : AppCompatActivity() {
         val adapter = NotesAdapter(mutableRoomNotes, this)
         notesListView.layoutManager = LinearLayoutManager(this)
         notesListView.adapter = adapter
+        adapter.notifyDataSetChanged()
     }
 
     override fun onResume() {

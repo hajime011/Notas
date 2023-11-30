@@ -1,4 +1,4 @@
-package com.example.mynotes
+package com.example.mynotes.util
 
 import android.content.Context
 import android.net.ConnectivityManager
