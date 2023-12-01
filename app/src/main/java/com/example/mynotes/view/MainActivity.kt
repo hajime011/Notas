@@ -36,6 +36,7 @@ class MainActivity : AppCompatActivity() {
     private val email = "pruebasgoo@coordinadora.com"
     private val password = "Coordi2023"
     private lateinit var addNoteButton: Button
+    private lateinit var Sincrinizacion: Button
     public lateinit var notesListView: RecyclerView
     private lateinit var fusedLocationClient: FusedLocationProviderClient
     private lateinit var appDatabase: AppDatabase
@@ -57,6 +58,10 @@ class MainActivity : AppCompatActivity() {
         sincronizarNotas()
         getNotes()
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
+        Sincrinizacion.setOnClickListener {
+            // Agrega la llamada a la función de sincronización
+            myNotesPresenter.sincronizarNotasConFirestore()
+        }
         obtenerYMostrarUbicacionActual()
     }
 
@@ -64,6 +69,7 @@ class MainActivity : AppCompatActivity() {
         auth = Firebase.auth
         notesListView = findViewById(R.id.notesListView)
         addNoteButton = findViewById(R.id.addNoteButton)
+        Sincrinizacion = findViewById(R.id.Sincrinizacion)
         appDatabase = (application as MyNotesApplication).appDatabase
 
         // Inicializa myNotesPresenter después de inicializar otras variables

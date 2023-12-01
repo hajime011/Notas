@@ -62,6 +62,7 @@
             mainActivity.notesListView.layoutManager = LinearLayoutManager(mainActivity)
             mainActivity.notesListView.adapter = adapter
             adapter.notifyDataSetChanged()
+
         }
 
 
