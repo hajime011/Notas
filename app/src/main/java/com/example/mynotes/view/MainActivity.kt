@@ -19,6 +19,7 @@ import com.example.mynotes.application.MyNotesApplication
 import com.example.mynotes.database.AppDatabase
 import com.example.mynotes.database.dao.NoteDao
 import com.example.mynotes.database.entity.NoteEntity
+import com.example.mynotes.presenter.MyNotesPresenter
 import com.example.mynotes.util.CONSTANTES
 import com.example.mynotes.util.UtilidadesRed
 import com.google.android.gms.location.FusedLocationProviderClient
@@ -47,9 +48,12 @@ class MainActivity : AppCompatActivity() {
     private lateinit var addNoteButton: Button
     private lateinit var notesListView: RecyclerView
     private lateinit var fusedLocationClient: FusedLocationProviderClient
-    private var ubicacionActual: GeoPoint? = null
+    var ubicacionActual: GeoPoint? = null
     private lateinit var appDatabase: AppDatabase
     private lateinit var noteDao: NoteDao
+
+    //presenter
+    private lateinit var myNotesPresenter: MyNotesPresenter
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -70,8 +74,20 @@ class MainActivity : AppCompatActivity() {
         notesListView = findViewById(R.id.notesListView)
         addNoteButton = findViewById(R.id.addNoteButton)
         appDatabase = (application as MyNotesApplication).appDatabase
+
+        // Inicializa myNotesPresenter después de inicializar otras variables
+        myNotesPresenter = MyNotesPresenter(this)
     }
 
+    private fun setupListeners() {
+        // Verifica si myNotesPresenter está inicializado antes de usarlo
+        if (::myNotesPresenter.isInitialized) {
+            addNoteButton.setOnClickListener {
+                // Mostrar el diálogo de creación de notas
+                myNotesPresenter.mostrarDialogoCrearNotas()
+            }
+        }
+    }
     private fun sessionFirebase() {
         auth.signInWithEmailAndPassword(email, password)
             .addOnCompleteListener(this) { task ->
@@ -91,99 +107,7 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun setupListeners() {
-        addNoteButton.setOnClickListener {
-            // Mostrar el diálogo de creación de notas
-            mostrarDialogoCrearNotas()
-        }
-    }
-    private fun mostrarDialogoCrearNotas() {
-        val builder = AlertDialog.Builder(this)
-        val inflater = layoutInflater
-        val dialogView = inflater.inflate(R.layout.dialog_crear_notas, null)
-        builder.setView(dialogView)
 
-        val nuevaNotaEditText = dialogView.findViewById<EditText>(R.id.nuevaNotaEditText)
-        val guardarNotaButton = dialogView.findViewById<Button>(R.id.guardarNotaButton)
-
-        val dialog = builder.create()
-
-        guardarNotaButton.setOnClickListener {
-            val nuevaNota = nuevaNotaEditText.text.toString()
-            val aplicacion = "Mobil"
-            val propietario = "Cristian D"
-            val fecha = Timestamp.now()
-            val dateFormat = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
-            val posicion = ubicacionActual
-            val fecha_registro = dateFormat.format(fecha.toDate())
-
-            if (UtilidadesRed.estaDisponibleRed(this)) {
-                val notas = hashMapOf(
-                    "aplicacion" to aplicacion,
-                    "fecha" to fecha,
-                    "fecha_registro" to fecha_registro,
-                    "nota" to nuevaNota,
-                    "posicion" to posicion,
-                    "propietario" to propietario
-                )
-
-                Firebase.firestore.collection(CONSTANTES.COLLECTION_NOTES)
-                    .add(notas)
-                    .addOnSuccessListener { documentReference ->
-                        val firestoreId = documentReference.id // id del firestore
-                        Log.d("TAG", "Documento agregado con ID: $firestoreId")
-                        Toast.makeText(this, "La nota se ha creado correctamente", Toast.LENGTH_SHORT).show()
-
-                        GlobalScope.launch {
-                            val noteEntity = NoteEntity(
-                                id = firestoreId,
-                                nota = nuevaNota,
-                                aplicacion = aplicacion,
-                                propietario = propietario,
-                                fecha_registro = fecha_registro,
-                                fecha = fecha.toString(),
-                                posicion = posicion.toString(),
-                                estado = "SiEnviado"
-                            )
-                            (application as MyNotesApplication).appDatabase.noteDao().insert(noteEntity)
-                        }
-                        dialog.dismiss()
-                    }
-                    .addOnFailureListener { e ->
-                        Log.w("TAG", "Error al agregar el documento", e)
-                        Toast.makeText(this, "Error al agregar la nota en Firebase", Toast.LENGTH_SHORT).show()
-                    }
-            } else {
-                // Almacenar la nota localmente si no hay conexión
-                val localNoteId = UUID.randomUUID().toString()
-
-                val noteEntity = NoteEntity(
-                    id = localNoteId,
-                    nota = nuevaNota,
-                    aplicacion = aplicacion,
-                    propietario = propietario,
-                    fecha_registro = fecha_registro,
-                    fecha = fecha.toString(),
-                    posicion = posicion.toString(),
-                    estado = "NoEnviado"
-                )
-
-                GlobalScope.launch {
-                    (application as MyNotesApplication).appDatabase.noteDao().insert(noteEntity)
-                    Log.d("MAR", "Local note inserted: $noteEntity")
-                    withContext(Dispatchers.Main) {
-                        loadRoomNotes()
-                    }
-                }
-
-
-                Toast.makeText(this@MainActivity, "La nota se ha guardado localmente", Toast.LENGTH_SHORT).show()
-                dialog.dismiss()
-            }
-        }
-
-        dialog.show()
-    }
 
 
 
@@ -245,7 +169,7 @@ class MainActivity : AppCompatActivity() {
 
 
     }
-    private fun loadRoomNotes() {
+    fun loadRoomNotes() {
         GlobalScope.launch(Dispatchers.IO) {
             val roomNotes: List<NoteEntity> = appDatabase.noteDao().getAllNotes()
             runOnUiThread {

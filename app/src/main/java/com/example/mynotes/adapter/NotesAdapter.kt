@@ -12,7 +12,7 @@ import com.example.mynotes.presenter.MyNotesPresenter
 import com.example.mynotes.view.MainActivity
 
 class NotesAdapter(private val notesList: MutableList<NoteEntity>, private val mainActivity: MainActivity) : RecyclerView.Adapter<NotesAdapter.ViewHolder>() {
-    private var myNotesPresenter = MyNotesPresenter()
+    private var myNotesPresenter = MyNotesPresenter(mainActivity)
     inner class ViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         val noteTitle: TextView = itemView.findViewById(R.id.noteTitle)
         val noteContent: TextView = itemView.findViewById(R.id.noteContent)
