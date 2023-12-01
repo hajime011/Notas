@@ -168,46 +168,69 @@ class MyNotesPresenter(private val mainActivity: MainActivity) {
 
 
     }
-    fun editarNotas(id: String, nuevaNota: String, mainActivity: MainActivity) {
-        if (UtilidadesRed.estaDisponibleRed(mainActivity)) {
-            GlobalScope.launch(Dispatchers.Main) {
-                try {
-                    // Actualizar la nota en Firebase
-                    val firestore = FirebaseFirestore.getInstance()
-                    val noteRef = firestore.collection(CONSTANTES.COLLECTION_NOTES).document(id)
-                    noteRef.update("nota", nuevaNota, "estado", "Editado").addOnCompleteListener {
-                        if (it.isSuccessful) {
-                            mainActivity.getNotes()
-                        }
-                    }.addOnFailureListener {
-                        Log.e("Error updating note", it.message.toString())
-                    }.await()
-                } catch (e: Exception) {
-                    Log.e("com.example.mynotes.adapter.NotesAdapter", "Error updating note: ${e.message}")
-                    Toast.makeText(
-                        mainActivity,
-                        "Error al actualizar la nota. Verifica tu conexión a Internet",
-                        Toast.LENGTH_SHORT
-                    ).show()
-                }
-            }
-        } else {
-            // Actualizar la nota localmente
-            val myNotesApplication = mainActivity.applicationContext as MyNotesApplication
-            val noteDao = myNotesApplication.appDatabase.noteDao()
-            GlobalScope.launch(Dispatchers.Main) {
-                noteDao.updateNoteContentAndStateById(id, nuevaNota, "Editado")
+    fun mostrarDialogoEditarNotas(notaAEditar: NoteEntity) {
+        val builder = AlertDialog.Builder(mainActivity)
+        val inflater = mainActivity.layoutInflater
+        val dialogView = inflater.inflate(R.layout.dialog_editar_notas, null)
+        builder.setView(dialogView)
 
-                withContext(Dispatchers.Main) {
-                    Toast.makeText(
-                        mainActivity,
-                        "No hay conexión a Internet. La nota se actualizó localmente",
-                        Toast.LENGTH_SHORT
-                    ).show()
+        val nuevaNotaEditText = dialogView.findViewById<EditText>(R.id.nuevaNotaEditText)
+        val guardarNotaButton = dialogView.findViewById<Button>(R.id.guardarNotaButton)
+
+        // Establecer el texto del EditText con la nota existente
+        nuevaNotaEditText.setText(notaAEditar.nota)
+
+        val dialog = builder.create()
+
+        guardarNotaButton.setOnClickListener {
+            val nuevaNota = nuevaNotaEditText.text.toString()
+
+            if (UtilidadesRed.estaDisponibleRed(mainActivity)) {
+                GlobalScope.launch(Dispatchers.Main) {
+                    try {
+                        // Actualizar la nota en Firebase
+                        val firestore = FirebaseFirestore.getInstance()
+                        val noteRef = firestore.collection(CONSTANTES.COLLECTION_NOTES).document(notaAEditar.id)
+                        noteRef.update("nota", nuevaNota, "estado", "Editado").addOnCompleteListener {
+                            if (it.isSuccessful) {
+                                mainActivity.getNotes()
+                            }
+                        }.addOnFailureListener {
+                            Log.e("Error updating note", it.message.toString())
+                        }.await()
+                    } catch (e: Exception) {
+                        Log.e("Error updating note", e.message.toString())
+                        Toast.makeText(
+                            mainActivity,
+                            "Error al actualizar la nota. Verifica tu conexión a Internet",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    }
+                }
+            } else {
+                // Actualizar la nota localmente
+                val myNotesApplication = mainActivity.applicationContext as MyNotesApplication
+                val noteDao = myNotesApplication.appDatabase.noteDao()
+                GlobalScope.launch(Dispatchers.Main) {
+                    noteDao.updateNoteContentAndStateById(notaAEditar.id, nuevaNota, "Editado")
+
+                    withContext(Dispatchers.Main) {
+                        mainActivity.loadRoomNotes()
+                        Toast.makeText(
+                            mainActivity,
+                            "No hay conexión a Internet. La nota se actualizó localmente",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    }
                 }
             }
+
+            dialog.dismiss()
         }
+
+        dialog.show()
     }
+
 
 
 }
