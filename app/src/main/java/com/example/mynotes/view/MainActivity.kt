@@ -157,7 +157,7 @@ class MainActivity : AppCompatActivity() {
                             adapter.notifyDataSetChanged()
 
                         }
-                        loadRoomNotes()
+                        //loadRoomNotes()
                     }
                 }.addOnFailureListener {
                     Log.i("ERROR", it.message.toString())
@@ -185,11 +185,6 @@ class MainActivity : AppCompatActivity() {
         notesListView.layoutManager = LinearLayoutManager(this)
         notesListView.adapter = adapter
         adapter.notifyDataSetChanged()
-    }
-
-    override fun onResume() {
-        super.onResume()
-        loadRoomNotes()
     }
 
 

@@ -77,6 +77,7 @@ class MyNotesPresenter(private val mainActivity: MainActivity) {
                                 estado = "SiEnviado"
                             )
                             (mainActivity.application as MyNotesApplication).appDatabase.noteDao().insert(noteEntity)
+                            mainActivity.getNotes()
                         }
                         dialog.dismiss()
                     }
@@ -119,22 +120,28 @@ class MyNotesPresenter(private val mainActivity: MainActivity) {
 
         if (UtilidadesRed.estaDisponibleRed(mainActivity)) {
             GlobalScope.launch(Dispatchers.Main) {
-
                 try {
-                    // borrar la nota en Firebase
+                    // Borrar la nota en Firebase
                     val firestore = FirebaseFirestore.getInstance()
                     val noteRef = firestore.collection(CONSTANTES.COLLECTION_NOTES).document(id)
-                    noteRef.delete().addOnCompleteListener{
-                        if(it.isSuccessful){
+
+                    noteRef.delete().addOnCompleteListener {
+                        if (it.isSuccessful) {
+                            // Borrar la nota localmente
+                            val myNotesApplication = mainActivity.applicationContext as MyNotesApplication
+                            val noteDao = myNotesApplication.appDatabase.noteDao()
+                            GlobalScope.launch(Dispatchers.IO) {
+                                noteDao.deleteById(id)
+                            }
+
+                            // Actualizar la lista de notas en la interfaz de usuario
                             mainActivity.getNotes()
                         }
-                    }.addOnFailureListener{
-                        Log.e("Error deleting note",it.message.toString())
+                    }.addOnFailureListener {
+                        Log.e("Error deleting note", it.message.toString())
                     }.await()
-
-
                 } catch (e: Exception) {
-                    Log.e("com.example.mynotes.adapter.NotesAdapter", "Error deleting note: ${e.message}")
+                    Log.e("Error deleting note", e.message.toString())
                     Toast.makeText(
                         mainActivity,
                         "Error al eliminar la nota. Verifica tu conexión a Internet",
