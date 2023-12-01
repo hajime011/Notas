@@ -365,6 +365,7 @@
                     noteDao.actualizarEstadoPorId(id,CONSTANTES.ESTADO_BORRADO)
 
                     withContext(Dispatchers.Main) {
+                        mainActivity.loadRoomNotes()
                         Toast.makeText(
                             mainActivity,
                             "No hay conexión a Internet. La nota se eliminó localmente",
@@ -399,12 +400,25 @@
                             // Actualizar la nota en Firebase
                             val firestore = FirebaseFirestore.getInstance()
                             val noteRef = firestore.collection(CONSTANTES.COLLECTION_NOTES).document(notaAEditar.id)
-                            noteRef.update("nota", nuevaNota, "estado", "Editado").addOnCompleteListener {
-                                if (it.isSuccessful) {
+                            noteRef.update("nota", nuevaNota, "estado", "Editado").addOnCompleteListener { task ->
+                                if (task.isSuccessful) {
+                                    // Obtener y mostrar las notas después de editar la nota en Firebase
                                     getNotes()
+
+                                    //local
+                                    val myNotesApplication = mainActivity.applicationContext as MyNotesApplication
+                                    val noteDao = myNotesApplication.appDatabase.noteDao()
+                                    GlobalScope.launch(Dispatchers.IO) {
+                                        noteDao.updateNoteContentAndStateById(notaAEditar.id, nuevaNota, "Editado")
+                                    }
+                                } else {
+                                    Log.e("Error updating note", task.exception?.message.toString())
+                                    Toast.makeText(
+                                        mainActivity,
+                                        "Error al actualizar la nota en Firebase",
+                                        Toast.LENGTH_SHORT
+                                    ).show()
                                 }
-                            }.addOnFailureListener {
-                                Log.e("Error updating note", it.message.toString())
                             }.await()
                         } catch (e: Exception) {
                             Log.e("Error updating note", e.message.toString())
@@ -422,14 +436,14 @@
                     GlobalScope.launch(Dispatchers.Main) {
                         noteDao.updateNoteContentAndStateById(notaAEditar.id, nuevaNota, "Editado")
 
-                        withContext(Dispatchers.Main) {
-                            mainActivity.loadRoomNotes()
-                            Toast.makeText(
-                                mainActivity,
-                                "No hay conexión a Internet. La nota se actualizó localmente",
-                                Toast.LENGTH_SHORT
-                            ).show()
-                        }
+                        // Obtener y mostrar las notas después de editar la nota localmente
+                        mainActivity.loadRoomNotes()
+
+                        Toast.makeText(
+                            mainActivity,
+                            "No hay conexión a Internet. La nota se actualizó localmente",
+                            Toast.LENGTH_SHORT
+                        ).show()
                     }
                 }
 
@@ -438,6 +452,7 @@
 
             dialog.show()
         }
+
 
 
     }
