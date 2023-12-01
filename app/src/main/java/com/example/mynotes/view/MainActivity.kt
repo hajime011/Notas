@@ -123,48 +123,8 @@ class MainActivity : AppCompatActivity() {
             Log.w("TAG", "No tienes permiso para acceder a la ubicación.")
         }
     }
-    fun getNotes() {
-        if (UtilidadesRed.estaDisponibleRed((this))) {
-            db.collection(CONSTANTES.COLLECTION_NOTES)
-                .get()
-                .addOnCompleteListener {
-                    if (it.isSuccessful) {
-                        val lista : ArrayList<NoteEntity> = ArrayList()
-                        appDatabase = (this.application as MyNotesApplication).appDatabase
-                        for (document in it.result) {
-
-                            val data = NoteEntity(
-                                document.id,
-                                document.getString("aplicacion").toString(),
-                                document.getTimestamp("fecha")!!.toDate().toString(),
-                                document.getString("fecha_registro").toString(),
-                                document.getString("nota").toString(),
-                                document.getGeoPoint("posicion").toString(),
-                                document.getString("propietario").toString(),
-                                "SiEnviado"
-                            )
-                            lista.add(data)
-                            GlobalScope.launch(Dispatchers.IO) {
-                                (appDatabase).noteDao()
-                                    .insert(data)
-                            }
-                            val adapter = NotesAdapter(lista, this)
-                            notesListView.layoutManager = LinearLayoutManager(this)
-                            notesListView.adapter = adapter
-                            adapter.notifyDataSetChanged()
-
-                        }
-                        //loadRoomNotes()
-                    }
-                }.addOnFailureListener {
-                    Log.i("ERROR", it.message.toString())
-                }
-        } else {
-//            OFFLINE
-            loadRoomNotes()
-        }
-
-
+    public fun getNotes() {
+        myNotesPresenter.getNotes()
     }
     fun loadRoomNotes() {
         GlobalScope.launch(Dispatchers.IO) {

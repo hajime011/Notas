@@ -32,6 +32,40 @@ import java.util.UUID
 class MyNotesPresenter(private val mainActivity: MainActivity) {
     private val db = com.google.firebase.ktx.Firebase.firestore
     private lateinit var appDatabase: AppDatabase
+
+    fun getNotes() {
+        if (UtilidadesRed.estaDisponibleRed(mainActivity)) {
+            db.collection(CONSTANTES.COLLECTION_NOTES)
+                .get()
+                .addOnCompleteListener {
+                    if (it.isSuccessful) {
+                        val lista: ArrayList<NoteEntity> = ArrayList()
+                        appDatabase = (mainActivity.application as MyNotesApplication).appDatabase
+                        for (document in it.result) {
+                            val data = NoteEntity(
+                                document.id,
+                                document.getString("aplicacion").toString(),
+                                document.getTimestamp("fecha")!!.toDate().toString(),
+                                document.getString("fecha_registro").toString(),
+                                document.getString("nota").toString(),
+                                document.getGeoPoint("posicion").toString(),
+                                document.getString("propietario").toString(),
+                                "SiEnviado"
+                            )
+                            lista.add(data)
+                            GlobalScope.launch(Dispatchers.IO) {
+                                (appDatabase).noteDao().insert(data)
+                            }
+                        }
+                        mainActivity.loadRoomNotes() // Actualizar la interfaz de usuario
+                    }
+                }.addOnFailureListener {
+                    Log.i("ERROR", it.message.toString())
+                }
+        } else {
+            mainActivity.loadRoomNotes() // Actualizar la interfaz de usuario
+        }
+    }
     fun sincronizarNotasConFirestore() {
         GlobalScope.launch(Dispatchers.IO) {
             val localNotes = (mainActivity.application as MyNotesApplication).appDatabase.noteDao().getAllNotes()

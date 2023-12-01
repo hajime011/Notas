@@ -22,7 +22,6 @@ class NotesAdapter(private val notesList: MutableList<NoteEntity>, private val m
 
         init {
             editButton.setOnClickListener {
-                val editedNoteContent = noteContent.text.toString()
                 val noteToEdit = notesList[adapterPosition]
                 myNotesPresenter.mostrarDialogoEditarNotas(noteToEdit)
             }
