@@ -1,18 +1,25 @@
 package com.example.mynotes.presenter
 
+import android.Manifest
+import android.content.pm.PackageManager
 import android.util.Log
 import android.widget.Button
 import android.widget.EditText
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
+import androidx.core.app.ActivityCompat
+import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.mynotes.R
+import com.example.mynotes.adapter.NotesAdapter
 import com.example.mynotes.application.MyNotesApplication
 import com.example.mynotes.database.AppDatabase
 import com.example.mynotes.database.entity.NoteEntity
 import com.example.mynotes.util.CONSTANTES
 import com.example.mynotes.util.UtilidadesRed
 import com.example.mynotes.view.MainActivity
+import com.google.android.gms.location.FusedLocationProviderClient
+import com.google.android.gms.location.LocationServices
 import com.google.firebase.Firebase
 import com.google.firebase.Timestamp
 import com.google.firebase.firestore.FirebaseFirestore
@@ -32,6 +39,45 @@ import java.util.UUID
 class MyNotesPresenter(private val mainActivity: MainActivity) {
     private val db = com.google.firebase.ktx.Firebase.firestore
     private lateinit var appDatabase: AppDatabase
+    var ubicacionActual: GeoPoint? = null
+    private lateinit var fusedLocationClient: FusedLocationProviderClient
+
+
+
+    fun cargarRoomNotes() {
+        GlobalScope.launch(Dispatchers.IO) {
+            val roomNotes: List<NoteEntity> = (mainActivity.application as MyNotesApplication).appDatabase.noteDao().getAllNotes()
+            mainActivity.runOnUiThread {
+                listarRoomNotes(roomNotes)
+            }
+        }
+    }
+
+    fun listarRoomNotes(roomNotes: List<NoteEntity>) {
+        val mutableRoomNotes: MutableList<NoteEntity> = roomNotes.toMutableList()
+        val adapter = NotesAdapter(mutableRoomNotes, mainActivity)
+        mainActivity.notesListView.layoutManager = LinearLayoutManager(mainActivity)
+        mainActivity.notesListView.adapter = adapter
+        adapter.notifyDataSetChanged()
+    }
+
+    fun obtenerYMostrarUbicacionActual() {
+        fusedLocationClient = LocationServices.getFusedLocationProviderClient(mainActivity)
+
+        if (ActivityCompat.checkSelfPermission(mainActivity, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+            fusedLocationClient.lastLocation
+                .addOnSuccessListener { location ->
+                    if (location != null) {
+                        ubicacionActual = GeoPoint(location.latitude, location.longitude)
+                        Log.d("MAR", "Ubicación actual - Latitud: ${location.latitude}, Longitud: ${location.longitude}")
+                    } else {
+                        Log.w("MAR", "No se pudo obtener la ubicación actual.")
+                    }
+                }
+        } else {
+            Log.w("TAG", "No tienes permiso para acceder a la ubicación.")
+        }
+    }
 
     fun getNotes() {
         if (UtilidadesRed.estaDisponibleRed(mainActivity)) {

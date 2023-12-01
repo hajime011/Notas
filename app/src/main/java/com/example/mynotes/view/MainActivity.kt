@@ -29,16 +29,6 @@ import com.google.firebase.auth.ktx.auth
 import com.google.firebase.firestore.GeoPoint
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
-import com.google.firebase.Timestamp
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.tasks.await
-import kotlinx.coroutines.withContext
-import java.text.ParseException
-import java.text.SimpleDateFormat
-import java.util.Locale
-import java.util.UUID
 
 class MainActivity : AppCompatActivity() {
     private lateinit var auth: FirebaseAuth
@@ -46,7 +36,7 @@ class MainActivity : AppCompatActivity() {
     private val email = "pruebasgoo@coordinadora.com"
     private val password = "Coordi2023"
     private lateinit var addNoteButton: Button
-    private lateinit var notesListView: RecyclerView
+    public lateinit var notesListView: RecyclerView
     private lateinit var fusedLocationClient: FusedLocationProviderClient
     var ubicacionActual: GeoPoint? = null
     private lateinit var appDatabase: AppDatabase
@@ -109,41 +99,14 @@ class MainActivity : AppCompatActivity() {
 
 
     private fun obtenerYMostrarUbicacionActual() {
-        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
-            fusedLocationClient.lastLocation
-                .addOnSuccessListener { location ->
-                    if (location != null) {
-                        ubicacionActual = GeoPoint(location.latitude, location.longitude)
-                        Log.d("MAR", "Ubicación actual - Latitud: ${location.latitude}, Longitud: ${location.longitude}")
-                    } else {
-                        Log.w("MAR", "No se pudo obtener la ubicación actual.")
-                    }
-                }
-        } else {
-            Log.w("TAG", "No tienes permiso para acceder a la ubicación.")
-        }
+        myNotesPresenter.obtenerYMostrarUbicacionActual()
     }
     public fun getNotes() {
         myNotesPresenter.getNotes()
     }
     fun loadRoomNotes() {
-        GlobalScope.launch(Dispatchers.IO) {
-            val roomNotes: List<NoteEntity> = appDatabase.noteDao().getAllNotes()
-            runOnUiThread {
-                listRoomNotes(roomNotes)
-
-            }
-        }
+       myNotesPresenter.cargarRoomNotes()
     }
-
-    private fun listRoomNotes(roomNotes: List<NoteEntity>) {
-        val mutableRoomNotes: MutableList<NoteEntity> = roomNotes.toMutableList()
-        val adapter = NotesAdapter(mutableRoomNotes, this)
-        notesListView.layoutManager = LinearLayoutManager(this)
-        notesListView.adapter = adapter
-        adapter.notifyDataSetChanged()
-    }
-
 
     private fun sincronizarNotas() {
         myNotesPresenter.sincronizarNotasConFirestore()
