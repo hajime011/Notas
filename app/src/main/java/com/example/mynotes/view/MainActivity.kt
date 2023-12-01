@@ -38,7 +38,6 @@ class MainActivity : AppCompatActivity() {
     private lateinit var addNoteButton: Button
     public lateinit var notesListView: RecyclerView
     private lateinit var fusedLocationClient: FusedLocationProviderClient
-    var ubicacionActual: GeoPoint? = null
     private lateinit var appDatabase: AppDatabase
     private lateinit var noteDao: NoteDao
 
@@ -48,6 +47,8 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+
+
         setupView()
         permisos()
         sessionFirebase()
@@ -70,10 +71,8 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun setupListeners() {
-        // Verifica si myNotesPresenter está inicializado antes de usarlo
         if (::myNotesPresenter.isInitialized) {
             addNoteButton.setOnClickListener {
-                // Mostrar el diálogo de creación de notas
                 myNotesPresenter.mostrarDialogoCrearNotas()
             }
         }
@@ -101,7 +100,7 @@ class MainActivity : AppCompatActivity() {
     private fun obtenerYMostrarUbicacionActual() {
         myNotesPresenter.obtenerYMostrarUbicacionActual()
     }
-    public fun getNotes() {
+    private fun getNotes() {
         myNotesPresenter.getNotes()
     }
     fun loadRoomNotes() {

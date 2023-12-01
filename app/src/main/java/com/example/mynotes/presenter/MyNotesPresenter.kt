@@ -41,6 +41,7 @@ class MyNotesPresenter(private val mainActivity: MainActivity) {
     private lateinit var appDatabase: AppDatabase
     var ubicacionActual: GeoPoint? = null
     private lateinit var fusedLocationClient: FusedLocationProviderClient
+    private lateinit var notesListView: RecyclerView
 
 
 
@@ -54,12 +55,15 @@ class MyNotesPresenter(private val mainActivity: MainActivity) {
     }
 
     fun listarRoomNotes(roomNotes: List<NoteEntity>) {
-        val mutableRoomNotes: MutableList<NoteEntity> = roomNotes.toMutableList()
-        val adapter = NotesAdapter(mutableRoomNotes, mainActivity)
+        // Filtrar las notas que no están borradas
+        val notasFiltradas = roomNotes.filter { it.estado != CONSTANTES.ESTADO_BORRADO }
+
+        val adapter = NotesAdapter(notasFiltradas.toMutableList(), mainActivity)
         mainActivity.notesListView.layoutManager = LinearLayoutManager(mainActivity)
         mainActivity.notesListView.adapter = adapter
         adapter.notifyDataSetChanged()
     }
+
 
     fun obtenerYMostrarUbicacionActual() {
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(mainActivity)
@@ -164,7 +168,7 @@ class MyNotesPresenter(private val mainActivity: MainActivity) {
             // Eliminas el documento de Firestore
             noteDocumentReference.delete().addOnCompleteListener{
                 if (it.isSuccessful){
-                    mainActivity.getNotes()
+                    getNotes()
                 }
             }.addOnFailureListener{
 
@@ -249,7 +253,8 @@ class MyNotesPresenter(private val mainActivity: MainActivity) {
             val propietario = "Cristian D"
             val fecha = Timestamp.now()
             val dateFormat = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
-            val posicion = mainActivity.ubicacionActual
+            obtenerYMostrarUbicacionActual()
+            val posicion = ubicacionActual ?: GeoPoint(0.0, 0.0)
             val fecha_registro = dateFormat.format(fecha.toDate())
 
             if (UtilidadesRed.estaDisponibleRed(mainActivity)) {
@@ -281,7 +286,7 @@ class MyNotesPresenter(private val mainActivity: MainActivity) {
                                 estado = "SiEnviado"
                             )
                             (mainActivity.application as MyNotesApplication).appDatabase.noteDao().insert(noteEntity)
-                            mainActivity.getNotes()
+                                getNotes()
                         }
                         dialog.dismiss()
                     }
@@ -339,7 +344,7 @@ class MyNotesPresenter(private val mainActivity: MainActivity) {
                             }
 
                             // Actualizar la lista de notas en la interfaz de usuario
-                            mainActivity.getNotes()
+                                getNotes()
                         }
                     }.addOnFailureListener {
                         Log.e("Error deleting note", it.message.toString())
@@ -397,7 +402,7 @@ class MyNotesPresenter(private val mainActivity: MainActivity) {
                         val noteRef = firestore.collection(CONSTANTES.COLLECTION_NOTES).document(notaAEditar.id)
                         noteRef.update("nota", nuevaNota, "estado", "Editado").addOnCompleteListener {
                             if (it.isSuccessful) {
-                                mainActivity.getNotes()
+                                getNotes()
                             }
                         }.addOnFailureListener {
                             Log.e("Error updating note", it.message.toString())
