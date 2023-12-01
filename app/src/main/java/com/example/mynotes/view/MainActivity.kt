@@ -63,7 +63,7 @@ class MainActivity : AppCompatActivity() {
         sessionFirebase()
         setupListeners()
         //loadRoomNotes()
-        sincroFirestore()
+        sincronizarNotas()
         getNotes()
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
         obtenerYMostrarUbicacionActual()
@@ -106,9 +106,6 @@ class MainActivity : AppCompatActivity() {
             ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.ACCESS_FINE_LOCATION), 1)
         }
     }
-
-
-
 
 
     private fun obtenerYMostrarUbicacionActual() {
@@ -188,124 +185,9 @@ class MainActivity : AppCompatActivity() {
     }
 
 
-    private fun sincroFirestore() {
-        GlobalScope.launch(Dispatchers.IO) {
-            val localNotes = appDatabase.noteDao().getAllNotes()
-
-
-
-            for (localNote in localNotes) {
-                when (localNote.estado) {
-                    "Borrado" -> {
-                        syncNoteDeleteFirebase(localNote,this@MainActivity)
-                    }
-
-                    "Editado" -> {
-                        syncEditedNoteWithFirebase(localNote)
-                    }
-                    "NoEnviado"->{
-                        syncNoteWithFirebase(localNote)
-                    }
-                }
-            }
-        }
-    }
-    private fun syncEditedNoteWithFirebase(localNote: NoteEntity) {
-        val noteData = hashMapOf(
-            "aplicacion" to localNote.aplicacion,
-            "fecha" to converterStringAtTimestamp(localNote.fecha),
-            "fecha_registro" to localNote.fecha_registro,
-            "nota" to localNote.nota,
-            "posicion" to geoPointConverter(localNote.posicion),
-            "propietario" to localNote.propietario,
-        )
-
-        db.collection(CONSTANTES.COLLECTION_NOTES)
-            .document(localNote.id)
-            .set(noteData)
-            .addOnSuccessListener { documentReference ->
-                GlobalScope.launch(Dispatchers.IO) {
-                    localNote.estado = "SiEnviado"
-                    appDatabase.noteDao().update(localNote)
-                    Log.d("MAR", "Edited note synced to Firebase: $localNote")
-                }
-            }
-            .addOnFailureListener { e ->
-                Log.e("MAR", "Error syncing edited note to Firebase: ${e.message}")
-            }
-    }
-    private suspend fun syncNoteDeleteFirebase(localNote: NoteEntity,mainActivity: MainActivity) {
-        // Aquí obtienes la referencia del documento en Firestore usando el ID de la nota
-        val noteDocumentReference = db.collection(CONSTANTES.COLLECTION_NOTES).document(localNote.id)
-
-        try {
-            // Eliminas el documento de Firestore
-            noteDocumentReference.delete().addOnCompleteListener{
-                if (it.isSuccessful){
-                    mainActivity.getNotes()
-                }
-            }.addOnFailureListener{
-
-            }.await()
-            //borra
-            appDatabase.noteDao().deleteSiEnviadoNotes()
-            Log.d("MAR", "Deleted note locally: $localNote")
-        } catch (e: Exception) {
-            Log.e("MAR", "Error deleting note in Firestore: ${e.message}")
-        }
+    private fun sincronizarNotas() {
+        myNotesPresenter.sincronizarNotasConFirestore()
     }
 
 
-
-
-    private fun syncNoteWithFirebase(localNote: NoteEntity) {
-        val noteData = hashMapOf(
-            "aplicacion" to localNote.aplicacion,
-            "fecha" to converterStringAtTimestamp(localNote.fecha),
-            "fecha_registro" to localNote.fecha_registro,
-            "nota" to localNote.nota,
-            "posicion" to geoPointConverter(localNote.posicion),
-            "propietario" to localNote.propietario,
-        )
-
-        db.collection(CONSTANTES.COLLECTION_NOTES)
-            .document(localNote.id)
-            .set(noteData)
-            .addOnSuccessListener { documentReference ->
-                GlobalScope.launch(Dispatchers.IO) {
-                    localNote.estado = "SiEnviado"
-                    appDatabase.noteDao().update(localNote)
-                    Log.d("MAR", "Note synced to Firebase: $localNote")
-                }
-            }
-            .addOnFailureListener { e ->
-                Log.e("MAR", "Error syncing note to Firebase: ${e.message}")
-            }
-    }
-
-
-    private fun converterStringAtTimestamp(fecha: String): Timestamp {
-        val dateFormat = SimpleDateFormat("EEE MMM dd HH:mm:ss 'GMT'Z yyyy", Locale.US)
-        try {
-            val fechaHoraDate = dateFormat.parse(fecha)
-            return if (fechaHoraDate != null) {
-                Timestamp(fechaHoraDate)
-            } else {
-                Timestamp.now()
-            }
-        } catch (e: ParseException) {
-            return Timestamp.now()
-        }
-    }
-
-    private fun geoPointConverter(position: String): GeoPoint {
-        val regex = Regex("[-+]?[0-9]*\\.?[0-9]+")
-        val matches = regex.findAll(position)
-        val coordinates = matches.map { it.value.toDouble() }.toList()
-        return if (coordinates.size == 2) {
-            GeoPoint(coordinates[0], coordinates[1])
-        } else {
-            GeoPoint(0.0, 0.0)
-        }
-    }
 }
