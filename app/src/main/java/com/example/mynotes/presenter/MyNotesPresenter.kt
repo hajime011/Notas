@@ -1,6 +1,7 @@
     package com.example.mynotes.presenter
 
     import android.Manifest
+    import android.content.Context
     import android.content.pm.PackageManager
     import android.util.Log
     import android.widget.Button
@@ -35,26 +36,32 @@
     import java.text.SimpleDateFormat
     import java.util.Locale
     import java.util.UUID
+    import javax.inject.Inject
 
-    class MyNotesPresenter(private val mainActivity: MainActivity) {
+    class MyNotesPresenter(val context: Context) {
         private val db = com.google.firebase.ktx.Firebase.firestore
-        private lateinit var appDatabase: AppDatabase
         var ubicacionActual: GeoPoint? = null
         private lateinit var fusedLocationClient: FusedLocationProviderClient
         private lateinit var notesListView: RecyclerView
+        @Inject
+        lateinit var appDatabase: AppDatabase
+
+        init {
+            ( context.applicationContext as MyNotesApplication).getMyNotesComponent().inject(this)
+        }
 
 
 
-        fun cargarRoomNotes() {
+        fun cargarRoomNotes(mainActivity: MainActivity) {
             GlobalScope.launch(Dispatchers.IO) {
-                val roomNotes: List<NoteEntity> = (mainActivity.application as MyNotesApplication).appDatabase.noteDao().getAllNotes()
+                val roomNotes: List<NoteEntity> =appDatabase.noteDao().getAllNotes()
                 mainActivity.runOnUiThread {
-                    listarRoomNotes(roomNotes)
+                    listarRoomNotes(roomNotes,mainActivity)
                 }
             }
         }
 
-        fun listarRoomNotes(roomNotes: List<NoteEntity>) {
+        fun listarRoomNotes(roomNotes: List<NoteEntity>,mainActivity: MainActivity) {
             // Filtrar las notas que no están borradas
             val notasFiltradas = roomNotes.filter { it.estado != CONSTANTES.ESTADO_BORRADO }
 
@@ -66,7 +73,7 @@
         }
 
 
-        fun obtenerYMostrarUbicacionActual() {
+        fun obtenerYMostrarUbicacionActual(mainActivity: MainActivity) {
             fusedLocationClient = LocationServices.getFusedLocationProviderClient(mainActivity)
 
             if (ActivityCompat.checkSelfPermission(mainActivity, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
@@ -84,14 +91,13 @@
             }
         }
 
-        fun getNotes() {
+        fun getNotes(mainActivity: MainActivity) {
             if (UtilidadesRed.estaDisponibleRed(mainActivity)) {
                 db.collection(CONSTANTES.COLLECTION_NOTES)
                     .get()
                     .addOnCompleteListener {
                         if (it.isSuccessful) {
                             val lista: ArrayList<NoteEntity> = ArrayList()
-                            appDatabase = (mainActivity.application as MyNotesApplication).appDatabase
                             for (document in it.result) {
                                 val data = NoteEntity(
                                     document.id,
@@ -105,7 +111,7 @@
                                 )
                                 lista.add(data)
                                 GlobalScope.launch(Dispatchers.IO) {
-                                    (appDatabase).noteDao().insert(data)
+                                    appDatabase.noteDao().insert(data)
                                 }
                             }
                             mainActivity.loadRoomNotes() // Actualizar la interfaz de usuario
@@ -119,7 +125,7 @@
         }
         fun sincronizarNotasConFirestore() {
             GlobalScope.launch(Dispatchers.IO) {
-                val localNotes = (mainActivity.application as MyNotesApplication).appDatabase.noteDao().getAllNotes()
+                val localNotes = appDatabase.noteDao().getAllNotes()
 
                 for (localNote in localNotes) {
                     when (localNote.estado) {
@@ -239,7 +245,7 @@
         }
 
 
-        fun mostrarDialogoCrearNotas() {
+        fun mostrarDialogoCrearNotas(mainActivity: MainActivity) {
             val builder = AlertDialog.Builder(mainActivity)
             val inflater = mainActivity.layoutInflater
             val dialogView = inflater.inflate(R.layout.dialog_crear_notas, null)
@@ -256,7 +262,7 @@
                 val propietario = "Cristian D"
                 val fecha = Timestamp.now()
                 val dateFormat = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
-                obtenerYMostrarUbicacionActual()
+                obtenerYMostrarUbicacionActual(mainActivity)
                 val posicion = ubicacionActual ?: GeoPoint(0.0, 0.0)
                 val fecha_registro = dateFormat.format(fecha.toDate())
 
@@ -288,8 +294,8 @@
                                     posicion = posicion.toString(),
                                     estado = "SiEnviado"
                                 )
-                                (mainActivity.application as MyNotesApplication).appDatabase.noteDao().insert(noteEntity)
-                                    getNotes()
+                                /*(mainActivity.application as MyNotesApplication).appDatabase.noteDao().insert(noteEntity)*/
+                                getNotes(mainActivity)
                             }
                             dialog.dismiss()
                         }
@@ -313,7 +319,7 @@
                     )
 
                     GlobalScope.launch {
-                        (mainActivity.application as MyNotesApplication).appDatabase.noteDao().insert(noteEntity)
+                        appDatabase.noteDao().insert(noteEntity)
                         Log.d("MAR", "Local note inserted: $noteEntity")
                         withContext(Dispatchers.Main) {
                             mainActivity.loadRoomNotes()
@@ -339,12 +345,11 @@
 
                         noteRef.delete().addOnCompleteListener {
                             if (it.isSuccessful) {
-                                val myNotesApplication = mainActivity.applicationContext as MyNotesApplication
-                                val noteDao = myNotesApplication.appDatabase.noteDao()
+                                val noteDao = appDatabase.noteDao()
                                 GlobalScope.launch(Dispatchers.IO) {
                                     noteDao.deleteById(id)
                                 }
-                                    getNotes()
+                                    getNotes(mainActivity)
                             }
                         }.addOnFailureListener {
                             Log.e("Error deleting note", it.message.toString())
@@ -359,9 +364,9 @@
                     }
                 }
             } else {
+
                 //borrar la nota localmente
-                val myNotesApplication = mainActivity.applicationContext as MyNotesApplication
-                val noteDao = myNotesApplication.appDatabase.noteDao()
+                val noteDao = appDatabase.noteDao()
                 GlobalScope.launch(Dispatchers.Main) {
                     noteDao.actualizarEstadoPorId(id,CONSTANTES.ESTADO_BORRADO)
 
@@ -376,9 +381,9 @@
                 }
             }
 
-
         }
-        fun mostrarDialogoEditarNotas(notaAEditar: NoteEntity) {
+        fun mostrarDialogoEditarNotas(notaAEditar: NoteEntity,mainActivity: MainActivity) {
+
             val builder = AlertDialog.Builder(mainActivity)
             val inflater = mainActivity.layoutInflater
             val dialogView = inflater.inflate(R.layout.dialog_editar_notas, null)
@@ -404,11 +409,10 @@
                             noteRef.update("nota", nuevaNota, "estado", "Editado").addOnCompleteListener { task ->
                                 if (task.isSuccessful) {
                                     // Obtener y mostrar las notas después de editar la nota en Firebase
-                                    getNotes()
+                                    getNotes(mainActivity)
 
                                     //local
-                                    val myNotesApplication = mainActivity.applicationContext as MyNotesApplication
-                                    val noteDao = myNotesApplication.appDatabase.noteDao()
+                                    val noteDao = appDatabase.noteDao()
                                     GlobalScope.launch(Dispatchers.IO) {
                                         noteDao.updateNoteContentAndStateById(notaAEditar.id, nuevaNota, "Editado")
                                     }
@@ -432,8 +436,7 @@
                     }
                 } else {
                     // Actualizar la nota localmente
-                    val myNotesApplication = mainActivity.applicationContext as MyNotesApplication
-                    val noteDao = myNotesApplication.appDatabase.noteDao()
+                    val noteDao =appDatabase.noteDao()
                     GlobalScope.launch(Dispatchers.Main) {
                         noteDao.updateNoteContentAndStateById(notaAEditar.id, nuevaNota, "Editado")
 
@@ -453,7 +456,6 @@
 
             dialog.show()
         }
-
 
 
     }

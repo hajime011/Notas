@@ -29,6 +29,7 @@ import com.google.firebase.auth.ktx.auth
 import com.google.firebase.firestore.GeoPoint
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
+import javax.inject.Inject
 
 class MainActivity : AppCompatActivity() {
     private lateinit var auth: FirebaseAuth
@@ -39,16 +40,20 @@ class MainActivity : AppCompatActivity() {
     private lateinit var Sincrinizacion: Button
     public lateinit var notesListView: RecyclerView
     private lateinit var fusedLocationClient: FusedLocationProviderClient
-    private lateinit var appDatabase: AppDatabase
     private lateinit var noteDao: NoteDao
 
     //presenter
     private lateinit var myNotesPresenter: MyNotesPresenter
 
+    @Inject
+    lateinit var appDatabase: AppDatabase
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
+
+        (this.application as MyNotesApplication).getMyNotesComponent().inject(this)
 
         setupView()
         permisos()
@@ -70,8 +75,6 @@ class MainActivity : AppCompatActivity() {
         notesListView = findViewById(R.id.notesListView)
         addNoteButton = findViewById(R.id.addNoteButton)
         Sincrinizacion = findViewById(R.id.Sincrinizacion)
-        appDatabase = (application as MyNotesApplication).appDatabase
-
         // Inicializa myNotesPresenter después de inicializar otras variables
         myNotesPresenter = MyNotesPresenter(this)
     }
@@ -79,7 +82,7 @@ class MainActivity : AppCompatActivity() {
     private fun setupListeners() {
         if (::myNotesPresenter.isInitialized) {
             addNoteButton.setOnClickListener {
-                myNotesPresenter.mostrarDialogoCrearNotas()
+                myNotesPresenter.mostrarDialogoCrearNotas(this)
             }
         }
     }
@@ -104,13 +107,13 @@ class MainActivity : AppCompatActivity() {
 
 
     private fun obtenerYMostrarUbicacionActual() {
-        myNotesPresenter.obtenerYMostrarUbicacionActual()
+        myNotesPresenter.obtenerYMostrarUbicacionActual(this)
     }
     private fun getNotes() {
-        myNotesPresenter.getNotes()
+        myNotesPresenter.getNotes(this)
     }
     fun loadRoomNotes() {
-       myNotesPresenter.cargarRoomNotes()
+       myNotesPresenter.cargarRoomNotes(this)
     }
 
     private fun sincronizarNotas() {

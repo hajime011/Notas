@@ -16,6 +16,7 @@ android {
         targetSdk = 34
         versionCode = 1
         versionName = "1.0"
+        multiDexEnabled = true
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
@@ -68,6 +69,13 @@ dependencies {
     kapt("androidx.room:room-compiler:$room_version")
 
     implementation("androidx.room:room-ktx:$room_version")
+
+    // dagger
+    implementation("com.google.dagger:dagger:2.48.1")
+    kapt("com.google.dagger:dagger-compiler:2.48.1")
+    //Multidex
+    val multidexVersion = "2.0.1"
+    implementation("androidx.multidex:multidex:$multidexVersion")
 
 
 
